@@ -38,10 +38,14 @@ export default async function Dashboard() {
   }
 
   function getGreeting() {
-    const hour = new Date().getHours()
-    if (hour >= 4 && hour < 11) return 'Pagi'
-    if (hour >= 11 && hour < 15) return 'Siang'
-    if (hour >= 15 && hour < 19) return 'Sore'
+    // Force to WIB (UTC+7) since Vercel servers use UTC
+    const date = new Date()
+    const utcHour = date.getUTCHours()
+    const wibHour = (utcHour + 7) % 24
+
+    if (wibHour >= 4 && wibHour < 11) return 'Pagi'
+    if (wibHour >= 11 && wibHour < 15) return 'Siang'
+    if (wibHour >= 15 && wibHour < 19) return 'Sore'
     return 'Malam'
   }
 
