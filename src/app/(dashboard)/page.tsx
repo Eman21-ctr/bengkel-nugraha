@@ -85,82 +85,102 @@ export default async function Dashboard() {
         </header>
 
         {/* Premium Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Revenue Card */}
-          <div className="relative overflow-hidden bg-gradient-to-br from-primary to-blue-700 p-6 rounded-2xl shadow-lg shadow-blue-200 group transition-all hover:scale-[1.02]">
-            <div className="absolute top-0 right-0 p-4 opacity-20 group-hover:scale-125 transition-transform">
-              <BanknotesIcon className="w-24 h-24 text-white" />
-            </div>
-            <div className="relative">
-              <h3 className="text-blue-100 text-sm font-medium uppercase tracking-wider mb-2">Pemasukan Hari Ini</h3>
-              <p className="text-4xl font-black text-white">{formatCurrency(stats.totalRevenue)}</p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {/* Revenue Card - Premium White with Subtle Details */}
+          <div className="relative overflow-hidden bg-white p-7 rounded-[32px] shadow-xl shadow-blue-100/50 group transition-all hover:translate-y-[-4px] border border-gray-100">
+            <div className="absolute -top-12 -right-12 w-48 h-48 bg-blue-50 rounded-full opacity-50 group-hover:scale-110 transition-transform duration-500" />
+            <div className="relative z-10 flex flex-col h-full justify-between">
+              <div>
+                <div className="flex justify-between items-center mb-6">
+                  <div className="bg-blue-600 p-3 rounded-2xl shadow-lg shadow-blue-200">
+                    <BanknotesIcon className="w-6 h-6 text-white" />
+                  </div>
+                  <span className="bg-green-100 text-green-700 text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest flex items-center gap-1">
+                    <ArrowUpRightIcon className="w-3 h-3" /> Real-time
+                  </span>
+                </div>
+                <h3 className="text-gray-400 text-xs font-bold uppercase tracking-[0.2em] mb-1">Pemasukan Hari Ini</h3>
+                <p className="text-4xl font-black text-gray-900 tracking-tight">{formatCurrency(stats.totalRevenue)}</p>
+              </div>
 
-              <div className="flex items-center mt-4 text-blue-100 text-xs gap-2">
-                <span className="bg-white/20 px-2 py-1 rounded-full flex items-center gap-1">
-                  <ArrowUpRightIcon className="w-3 h-3" />
-                  Real-time
-                </span>
-                <div className="flex gap-4 ml-2 pl-4 border-l border-white/20">
-                  <div className="flex flex-col">
-                    <p className="text-[10px] text-blue-200 uppercase font-bold">Bengkel</p>
-                    <p className="font-bold text-white text-sm">{formatCurrency(stats.bengkelSales)}</p>
-                  </div>
-                  <div className="flex flex-col">
-                    <p className="text-[10px] text-blue-200 uppercase font-bold">Kafe</p>
-                    <p className="font-bold text-white text-sm">{formatCurrency(stats.kafeSales)}</p>
-                  </div>
+              <div className="mt-8 pt-6 border-t border-gray-50 flex gap-6 text-xs">
+                <div className="flex-1">
+                  <p className="text-[10px] text-gray-400 uppercase font-black tracking-widest mb-1">Bengkel</p>
+                  <p className="font-extrabold text-gray-800">{formatCurrency(stats.bengkelSales)}</p>
+                </div>
+                <div className="w-px h-10 bg-gray-100" />
+                <div className="flex-1">
+                  <p className="text-[10px] text-gray-400 uppercase font-black tracking-widest mb-1">Kafe</p>
+                  <p className="font-extrabold text-blue-600">{formatCurrency(stats.kafeSales)}</p>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Transactions Card */}
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between hover:shadow-xl transition-all border-l-4 border-l-orange-500">
-            <div>
-              <div className="flex justify-between items-start">
-                <h3 className="text-gray-500 text-sm font-medium uppercase tracking-wider">Total Pesanan</h3>
-                <div className="p-2 bg-orange-50 rounded-lg">
-                  <ShoppingCartIcon className="w-6 h-6 text-orange-600" />
+          {/* Transactions Card - Premium White */}
+          <div className="bg-white p-7 rounded-[32px] shadow-xl shadow-orange-100/30 group border border-gray-100 hover:translate-y-[-4px] transition-all relative overflow-hidden">
+            <div className="absolute -top-12 -right-12 w-48 h-48 bg-orange-50 rounded-full opacity-50 group-hover:scale-110 transition-transform duration-500" />
+            <div className="flex flex-col h-full justify-between relative z-10">
+              <div>
+                <div className="flex justify-between items-center mb-6">
+                  <div className="bg-orange-500 p-3 rounded-2xl shadow-lg shadow-orange-200">
+                    <ShoppingCartIcon className="w-6 h-6 text-white" />
+                  </div>
+                  <div className="w-2 h-2 rounded-full bg-orange-400 animate-pulse" />
+                </div>
+                <h3 className="text-gray-400 text-xs font-bold uppercase tracking-[0.2em] mb-1">Total Pesanan</h3>
+                <p className="text-4xl font-black text-gray-900 tracking-tight">{stats.totalTransactions}</p>
+              </div>
+              <div className="mt-8">
+                <div className="bg-orange-50/50 p-4 rounded-2xl flex items-center justify-between border border-orange-100/50">
+                  <span className="text-[10px] font-black uppercase text-orange-700 tracking-wider">Aktifitas</span>
+                  <span className="text-[10px] font-black text-orange-900 uppercase tracking-wider bg-white px-2 py-1 rounded-lg">Online</span>
                 </div>
               </div>
-              <p className="text-4xl font-bold mt-2 text-gray-900">{stats.totalTransactions}</p>
-            </div>
-            <div className="mt-4 pt-4 border-t border-gray-50">
-              <p className="text-xs text-orange-600 font-medium flex items-center gap-1">
-                Status: Aktif Hari Ini
-              </p>
             </div>
           </div>
 
-          {/* Low Stock Card */}
+          {/* Low Stock Card - Premium Dynamic Color */}
           <div className={clsx(
-            "p-6 rounded-2xl shadow-sm border flex flex-col justify-between hover:shadow-xl transition-all",
+            "p-7 rounded-[32px] shadow-xl group border hover:translate-y-[-4px] transition-all relative overflow-hidden",
             stats.lowStockCount > 0
-              ? "bg-red-50 border-red-100 border-l-4 border-l-red-500"
-              : "bg-white border-gray-100 border-l-4 border-l-green-500"
+              ? "bg-red-50/50 border-red-100 shadow-red-100/30"
+              : "bg-white border-gray-100 shadow-green-100/30"
           )}>
-            <div>
-              <div className="flex justify-between items-start">
-                <h3 className="text-gray-500 text-sm font-medium uppercase tracking-wider">Stok Menipis</h3>
+            <div className={clsx(
+              "absolute -top-12 -right-12 w-48 h-48 rounded-full opacity-50 group-hover:scale-110 transition-transform duration-500",
+              stats.lowStockCount > 0 ? "bg-red-100/50" : "bg-green-50/50"
+            )} />
+            <div className="flex flex-col h-full justify-between relative z-10">
+              <div>
+                <div className="flex justify-between items-center mb-6">
+                  <div className={clsx(
+                    "p-3 rounded-2xl shadow-lg",
+                    stats.lowStockCount > 0 ? "bg-red-500 shadow-red-200" : "bg-green-500 shadow-green-200"
+                  )}>
+                    <ExclamationTriangleIcon className="w-6 h-6 text-white" />
+                  </div>
+                </div>
+                <h3 className="text-gray-400 text-xs font-bold uppercase tracking-[0.2em] mb-1">Stok Menipis</h3>
+                <p className={clsx(
+                  "text-4xl font-black tracking-tight",
+                  stats.lowStockCount > 0 ? "text-red-700" : "text-gray-900"
+                )}>{stats.lowStockCount}</p>
+              </div>
+              <div className="mt-8">
                 <div className={clsx(
-                  "p-2 rounded-lg",
-                  stats.lowStockCount > 0 ? "bg-red-100" : "bg-green-100"
+                  "p-4 rounded-2xl flex items-center justify-between border",
+                  stats.lowStockCount > 0 ? "bg-red-100/50 border-red-200/50" : "bg-green-50/50 border-green-200/50"
                 )}>
-                  <ExclamationTriangleIcon className={clsx(
-                    "w-6 h-6",
-                    stats.lowStockCount > 0 ? "text-red-600" : "text-green-600"
-                  )} />
+                  <span className={clsx(
+                    "text-[10px] font-black uppercase tracking-widest",
+                    stats.lowStockCount > 0 ? "text-red-700" : "text-green-700"
+                  )}>
+                    {stats.lowStockCount > 0 ? 'Perlu Restock' : 'Stok Aman'}
+                  </span>
+                  <Link href="/inventory" className="text-[10px] font-black uppercase tracking-widest text-primary hover:underline">Detail</Link>
                 </div>
               </div>
-              <p className="text-4xl font-bold mt-2 text-gray-900">{stats.lowStockCount}</p>
-            </div>
-            <div className="mt-4 pt-4 border-t border-gray-50">
-              <p className={clsx(
-                "text-xs font-medium",
-                stats.lowStockCount > 0 ? "text-red-600" : "text-green-600"
-              )}>
-                {stats.lowStockCount > 0 ? 'Perlu Restock Segera!' : 'Stok Aman Terkendali'}
-              </p>
             </div>
           </div>
         </div>
