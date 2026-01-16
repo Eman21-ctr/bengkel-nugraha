@@ -1,0 +1,469 @@
+'use client'
+
+import { useState, useEffect, useTransition } from 'react'
+import {
+    ChartBarIcon,
+    BanknotesIcon,
+    ShoppingCartIcon,
+    WrenchScrewdriverIcon,
+    ExclamationTriangleIcon,
+    CubeIcon,
+    UserIcon
+} from '@heroicons/react/24/outline'
+import {
+    getSalesSummary,
+    getTopProducts,
+    getTopServices,
+    getLowStockProducts,
+    getCategorySalesDetail,
+    getStockMovements,
+    getMemberReport,
+    type ReportPeriod
+} from './actions'
+import clsx from 'clsx'
+
+type ReportType = 'sales' | 'items' | 'stock' | 'member'
+
+export default function ReportsPage() {
+    const [reportType, setReportType] = useState<ReportType>('sales')
+    const [period, setPeriod] = useState<ReportPeriod>('today')
+    const [customStart, setCustomStart] = useState('')
+    const [customEnd, setCustomEnd] = useState('')
+
+    const [summary, setSummary] = useState({
+        totalSales: 0,
+        totalTransactions: 0,
+        bengkelSales: 0,
+        kafeSales: 0,
+        bengkelCount: 0,
+        kafeCount: 0
+    })
+    const [categoryDetail, setCategoryDetail] = useState<{ bengkel: any[], kafe: any[] }>({ bengkel: [], kafe: [] })
+    const [topProducts, setTopProducts] = useState<{ name: string; qty: number; revenue: number }[]>([])
+    const [topServices, setTopServices] = useState<{ name: string; qty: number; revenue: number }[]>([])
+    const [lowStock, setLowStock] = useState<{ id: string; name: string; stock: number; min_stock: number; unit: string }[]>([])
+    const [stockMovements, setStockMovements] = useState<any[]>([])
+    const [memberData, setMemberData] = useState<any>(null)
+
+    const [isPending, startTransition] = useTransition()
+
+    const loadData = () => {
+        startTransition(async () => {
+            if (reportType === 'sales') {
+                const [summ, detail] = await Promise.all([
+                    getSalesSummary(period, customStart, customEnd),
+                    getCategorySalesDetail(period, customStart, customEnd)
+                ])
+                setSummary(summ)
+                setCategoryDetail(detail)
+            } else if (reportType === 'items') {
+                const [prods, svcs] = await Promise.all([
+                    getTopProducts(period, customStart, customEnd, 10),
+                    getTopServices(period, customStart, customEnd, 10)
+                ])
+                setTopProducts(prods)
+                setTopServices(svcs)
+            } else if (reportType === 'stock') {
+                const [movements, low] = await Promise.all([
+                    getStockMovements(period, customStart, customEnd),
+                    getLowStockProducts()
+                ])
+                setStockMovements(movements)
+                setLowStock(low)
+            } else if (reportType === 'member') {
+                const data = await getMemberReport()
+                setMemberData(data)
+            }
+        })
+    }
+
+    useEffect(() => {
+        loadData()
+    }, [reportType]) // Reload when type changes
+
+    const formatCurrency = (amount: number) =>
+        new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount)
+
+    const periodOptions: { value: ReportPeriod; label: string }[] = [
+        { value: 'today', label: 'Hari Ini' },
+        { value: 'month', label: 'Bulan Ini' },
+        { value: 'year', label: 'Tahun Ini' },
+        { value: 'custom', label: 'Kustom' }
+    ]
+
+    const reportOptions: { value: ReportType; label: string }[] = [
+        { value: 'sales', label: 'Laporan Penjualan' },
+        { value: 'items', label: 'Laporan Per Item' },
+        { value: 'stock', label: 'Laporan Stok' },
+        { value: 'member', label: 'Laporan Member' }
+    ]
+
+    return (
+        <div className="space-y-6 pb-20 md:pb-8">
+            {/* Header - Hidden on Print */}
+            <div className="bg-white p-4 md:p-6 rounded-xl shadow-sm border border-gray-200 space-y-4 print:hidden">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div>
+                        <h1 className="text-2xl font-bold text-gray-900">Laporan</h1>
+                        <p className="text-sm text-gray-500">Analisis data usaha Anda</p>
+                    </div>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={loadData}
+                            disabled={isPending}
+                            className="px-6 py-2 bg-secondary text-white font-bold rounded-lg hover:bg-green-600 disabled:opacity-50 transition-colors cursor-pointer"
+                        >
+                            {isPending ? 'Memuat...' : 'Tampilkan'}
+                        </button>
+                        <button
+                            onClick={() => window.print()}
+                            className="px-6 py-2 bg-gray-100 text-gray-700 font-bold rounded-lg hover:bg-gray-200 transition-colors cursor-pointer"
+                        >
+                            Export PDF
+                        </button>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 border-t pt-4">
+                    <div>
+                        <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Jenis Laporan</label>
+                        <select
+                            value={reportType}
+                            onChange={(e) => setReportType(e.target.value as ReportType)}
+                            className="w-full input-std text-black"
+                        >
+                            {reportOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                        </select>
+                    </div>
+                    <div>
+                        <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Periode</label>
+                        <div className="flex gap-2">
+                            {periodOptions.map(opt => (
+                                <button
+                                    key={opt.value}
+                                    onClick={() => setPeriod(opt.value)}
+                                    className={clsx(
+                                        'flex-1 py-2 text-xs font-bold rounded-lg border transition-all cursor-pointer',
+                                        period === opt.value
+                                            ? 'bg-primary text-white border-primary'
+                                            : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                                    )}
+                                >
+                                    {opt.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                    {period === 'custom' && (
+                        <div className="grid grid-cols-2 gap-2">
+                            <div>
+                                <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Dari</label>
+                                <input type="date" value={customStart} onChange={(e) => setCustomStart(e.target.value)} className="w-full input-std text-black text-xs" />
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Sampai</label>
+                                <input type="date" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)} className="w-full input-std text-black text-xs" />
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Report Content */}
+            <div className="printable-area">
+                <div className="hidden print:block text-center mb-8">
+                    <h1 className="text-2xl font-bold uppercase">{reportOptions.find(o => o.value === reportType)?.label}</h1>
+                    <p className="text-gray-500">Filter: {periodOptions.find(o => o.value === period)?.label} ({customStart || '-'} s/d {customEnd || '-'})</p>
+                    <hr className="my-4" />
+                </div>
+
+                {reportType === 'sales' && (
+                    <div className="space-y-6">
+                        {/* Summary Cards */}
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                            <SummaryCard title="Total Penjualan" value={formatCurrency(summary.totalSales)} icon={BanknotesIcon} color="green" />
+                            <SummaryCard title="Total Transaksi" value={summary.totalTransactions.toString()} icon={ShoppingCartIcon} color="blue" />
+                            <SummaryCard title="Bengkel" value={formatCurrency(summary.bengkelSales)} subtitle={`${summary.bengkelCount} transaksi`} icon={WrenchScrewdriverIcon} color="orange" />
+                            <SummaryCard title="Kafe" value={formatCurrency(summary.kafeSales)} subtitle={`${summary.kafeCount} transaksi`} icon={CubeIcon} color="purple" />
+                        </div>
+
+                        {/* Category Detail */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                                <div className="p-4 bg-orange-50 border-b border-orange-100">
+                                    <h3 className="font-bold text-orange-800 flex items-center gap-2">
+                                        <WrenchScrewdriverIcon className="w-5 h-5" /> BENGKEL
+                                    </h3>
+                                </div>
+                                <div className="p-4">
+                                    <table className="w-full text-sm">
+                                        <tbody className="divide-y divide-gray-100">
+                                            {categoryDetail.bengkel.map(item => (
+                                                <tr key={item.name} className="hover:bg-gray-50">
+                                                    <td className="py-2 text-gray-600">{item.name}</td>
+                                                    <td className="py-2 text-right font-medium text-gray-400">{item.qty}x</td>
+                                                    <td className="py-2 text-right font-bold text-gray-900">{formatCurrency(item.total)}</td>
+                                                </tr>
+                                            ))}
+                                            {categoryDetail.bengkel.length === 0 && <tr><td colSpan={3} className="py-8 text-center text-gray-400">Belum ada data</td></tr>}
+                                        </tbody>
+                                        {categoryDetail.bengkel.length > 0 && (
+                                            <tfoot>
+                                                <tr className="border-t-2 border-orange-100">
+                                                    <td colSpan={2} className="py-3 font-bold text-gray-900">Total Bengkel</td>
+                                                    <td className="py-3 text-right font-bold text-orange-600 text-lg">{formatCurrency(summary.bengkelSales)}</td>
+                                                </tr>
+                                            </tfoot>
+                                        )}
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                                <div className="p-4 bg-purple-50 border-b border-purple-100">
+                                    <h3 className="font-bold text-purple-800 flex items-center gap-2">
+                                        <CubeIcon className="w-5 h-5" /> KAFE
+                                    </h3>
+                                </div>
+                                <div className="p-4">
+                                    <table className="w-full text-sm">
+                                        <tbody className="divide-y divide-gray-100">
+                                            {categoryDetail.kafe.map(item => (
+                                                <tr key={item.name} className="hover:bg-gray-50">
+                                                    <td className="py-2 text-gray-600">{item.name}</td>
+                                                    <td className="py-2 text-right font-medium text-gray-400">{item.qty} item</td>
+                                                    <td className="py-2 text-right font-bold text-gray-900">{formatCurrency(item.total)}</td>
+                                                </tr>
+                                            ))}
+                                            {categoryDetail.kafe.length === 0 && <tr><td colSpan={3} className="py-8 text-center text-gray-400">Belum ada data</td></tr>}
+                                        </tbody>
+                                        {categoryDetail.kafe.length > 0 && (
+                                            <tfoot>
+                                                <tr className="border-t-2 border-purple-100">
+                                                    <td colSpan={2} className="py-3 font-bold text-gray-900">Total Kafe</td>
+                                                    <td className="py-3 text-right font-bold text-purple-600 text-lg">{formatCurrency(summary.kafeSales)}</td>
+                                                </tr>
+                                            </tfoot>
+                                        )}
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {reportType === 'items' && (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                            <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
+                                <ChartBarIcon className="w-6 h-6 text-yellow-500" /> TOP 10 BARANG TERLARIS
+                            </h3>
+                            <div className="space-y-4">
+                                {topProducts.map((p, idx) => (
+                                    <div key={p.name} className="flex items-center justify-between group">
+                                        <div className="flex items-center gap-3">
+                                            <span className={clsx("w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs", idx < 3 ? "bg-yellow-100 text-yellow-700" : "bg-gray-100 text-gray-500")}>
+                                                {idx + 1}
+                                            </span>
+                                            <div>
+                                                <p className="font-bold text-gray-800 group-hover:text-primary transition-colors">{p.name}</p>
+                                                <p className="text-xs text-gray-400">{p.qty} terjual</p>
+                                            </div>
+                                        </div>
+                                        <span className="font-bold text-gray-900">{formatCurrency(p.revenue)}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                            <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
+                                <ChartBarIcon className="w-6 h-6 text-blue-500" /> TOP 10 JASA TERLARIS
+                            </h3>
+                            <div className="space-y-4">
+                                {topServices.map((s, idx) => (
+                                    <div key={s.name} className="flex items-center justify-between group">
+                                        <div className="flex items-center gap-3">
+                                            <span className={clsx("w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs", idx < 3 ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-500")}>
+                                                {idx + 1}
+                                            </span>
+                                            <div>
+                                                <p className="font-bold text-gray-800 group-hover:text-primary transition-colors">{s.name}</p>
+                                                <p className="text-xs text-gray-400">{s.qty} kali</p>
+                                            </div>
+                                        </div>
+                                        <span className="font-bold text-gray-900">{formatCurrency(s.revenue)}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {reportType === 'stock' && (
+                    <div className="space-y-6">
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                            <div className="p-4 border-b border-gray-100 flex justify-between items-center">
+                                <h3 className="font-bold text-gray-800">Riwayat Pergerakan Stok</h3>
+                                <span className="text-xs text-gray-500">{stockMovements.length} record</span>
+                            </div>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm">
+                                    <thead className="bg-gray-50 text-gray-500 uppercase text-[10px] font-bold">
+                                        <tr>
+                                            <th className="px-4 py-3 text-left">Waktu</th>
+                                            <th className="px-4 py-3 text-left">Item</th>
+                                            <th className="px-4 py-3 text-center">Tipe</th>
+                                            <th className="px-4 py-3 text-center">Qty</th>
+                                            <th className="px-4 py-3 text-center">Sisa Stok</th>
+                                            <th className="px-4 py-3 text-left">Keterangan</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100 font-medium">
+                                        {stockMovements.map(m => (
+                                            <tr key={m.id} className="hover:bg-gray-50">
+                                                <td className="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">
+                                                    {new Date(m.created_at).toLocaleString('id-ID', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                                                </td>
+                                                <td className="px-4 py-3 text-gray-900">{m.product?.name || 'Item Dihapus'}</td>
+                                                <td className="px-4 py-3 text-center">
+                                                    <span className={clsx("px-2 py-0.5 rounded text-[10px] uppercase font-bold", m.type === 'in' ? 'bg-green-100 text-green-700' : m.type === 'out' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700')}>
+                                                        {m.type === 'in' ? 'Masuk' : m.type === 'out' ? 'Keluar' : 'Adj'}
+                                                    </span>
+                                                </td>
+                                                <td className={clsx("px-4 py-3 text-center font-bold", m.type === 'in' ? 'text-green-600' : 'text-red-600')}>
+                                                    {m.type === 'in' ? '+' : '-'}{m.qty}
+                                                </td>
+                                                <td className="px-4 py-3 text-center text-gray-500">{m.stock_before} → {m.stock_after}</td>
+                                                <td className="px-4 py-3 text-xs text-gray-500">{m.description || '-'}</td>
+                                            </tr>
+                                        ))}
+                                        {stockMovements.length === 0 && <tr><td colSpan={6} className="py-12 text-center text-gray-400">Belum ada pergerakan stok di periode ini</td></tr>}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        {lowStock.length > 0 && (
+                            <div className="bg-accent/5 border border-accent/20 rounded-xl p-6">
+                                <h3 className="font-bold text-accent mb-4 flex items-center gap-2">
+                                    <ExclamationTriangleIcon className="w-6 h-6" /> PERINGATAN STOK MENIPIS
+                                </h3>
+                                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                                    {lowStock.map(p => (
+                                        <div key={p.id} className="bg-white p-3 rounded-lg border border-accent/10">
+                                            <p className="text-xs font-bold text-gray-700 truncate">{p.name}</p>
+                                            <p className="text-lg font-black text-accent">{p.stock} <span className="text-[10px] font-medium">{p.unit}</span></p>
+                                            <div className="h-1.5 w-full bg-gray-100 rounded-full mt-2 overflow-hidden">
+                                                <div className="h-full bg-accent" style={{ width: `${(p.stock / p.min_stock) * 100}%` }} />
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {reportType === 'member' && memberData && (
+                    <div className="space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <SummaryCard title="Total Member" value={memberData.totalMembers} icon={UserIcon} color="blue" />
+                            <SummaryCard title="Aktif Bulan Ini" value={memberData.activeCount} icon={ShoppingCartIcon} color="green" />
+                            <SummaryCard title="Poin Beredar" value={memberData.totalPoints.toLocaleString()} subtitle={`Setara ${formatCurrency(memberData.totalPoints * 100)}`} icon={BanknotesIcon} color="orange" />
+                        </div>
+
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                            <div className="p-4 border-b border-gray-100 flex items-center gap-2">
+                                <ChartBarIcon className="w-5 h-5 text-primary" />
+                                <h3 className="font-bold text-gray-800">Ranking Member Teraktif</h3>
+                            </div>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm">
+                                    <thead className="bg-gray-50 text-gray-500 uppercase text-[10px] font-bold">
+                                        <tr>
+                                            <th className="px-4 py-3 text-center w-16">Rank</th>
+                                            <th className="px-4 py-3 text-left">Nama Member</th>
+                                            <th className="px-4 py-3 text-center">Poin</th>
+                                            <th className="px-4 py-3 text-left">No. HP</th>
+                                            <th className="px-4 py-3 text-left">Bergabung</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100">
+                                        {memberData.members.map((m: any, idx: number) => (
+                                            <tr key={m.id} className="hover:bg-gray-50">
+                                                <td className="px-4 py-4 text-center">
+                                                    <span className={clsx(
+                                                        "inline-flex items-center justify-center w-6 h-6 rounded-full font-bold text-xs",
+                                                        idx === 0 ? "bg-yellow-100 text-yellow-700" :
+                                                            idx === 1 ? "bg-gray-100 text-gray-600" :
+                                                                idx === 2 ? "bg-orange-100 text-orange-700" : "text-gray-400"
+                                                    )}>
+                                                        {idx + 1}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-4">
+                                                    <p className="font-bold text-gray-900">{m.name}</p>
+                                                    <p className="text-[10px] text-gray-400">ID: {m.id.substring(0, 8)}</p>
+                                                </td>
+                                                <td className="px-4 py-4 text-center">
+                                                    <span className="font-black text-primary text-lg">{m.points}</span>
+                                                    <p className="text-[10px] text-gray-400">pts</p>
+                                                </td>
+                                                <td className="px-4 py-4 font-mono text-gray-600">{m.phone}</td>
+                                                <td className="px-4 py-4 text-gray-500 text-xs">
+                                                    {new Date(m.created_at).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                        {memberData.members.length === 0 && <tr><td colSpan={5} className="py-12 text-center text-gray-400">Belum ada data member</td></tr>}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* Print Only Footer */}
+            <div className="hidden print:block fixed bottom-0 left-0 right-0 text-[10px] text-gray-400 text-center pb-4">
+                Dicetak pada {new Date().toLocaleString('id-ID')} | Nugraha Bengkel & Kios
+            </div>
+        </div>
+    )
+}
+
+function SummaryCard({
+    title,
+    value,
+    subtitle,
+    icon: Icon,
+    color
+}: {
+    title: string
+    value: string
+    subtitle?: string
+    icon: React.ComponentType<{ className?: string }>
+    color: 'green' | 'blue' | 'orange' | 'purple'
+}) {
+    const colorClasses = {
+        green: 'bg-green-50 text-green-600 border-green-100',
+        blue: 'bg-blue-50 text-blue-600 border-blue-100',
+        orange: 'bg-orange-50 text-orange-600 border-orange-100',
+        purple: 'bg-purple-50 text-purple-600 border-purple-100'
+    }
+
+    return (
+        <div className={clsx("bg-white rounded-xl shadow-sm border p-4", colorClasses[color].split(' ')[2])}>
+            <div className="flex items-center gap-3 mb-2">
+                <span className={clsx('p-2 rounded-lg', colorClasses[color].split(' ').slice(0, 2).join(' '))}>
+                    <Icon className="w-5 h-5" />
+                </span>
+                <span className="text-xs font-bold text-gray-500 uppercase">{title}</span>
+            </div>
+            <p className="text-xl font-black text-gray-900">{value}</p>
+            {subtitle && <p className="text-[10px] font-medium text-gray-400 mt-1">{subtitle}</p>}
+        </div>
+    )
+}
+
