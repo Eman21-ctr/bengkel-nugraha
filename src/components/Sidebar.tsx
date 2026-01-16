@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
-    ChartBarIcon,
+    HomeIcon,
     ShoppingCartIcon,
     CubeIcon,
     WrenchScrewdriverIcon,
@@ -17,7 +17,7 @@ import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 
 const navigation = [
-    { name: 'Dashboard', href: '/', icon: ChartBarIcon },
+    { name: 'Dashboard', href: '/', icon: HomeIcon },
     { name: 'Transaksi', href: '/transactions', icon: ShoppingCartIcon },
     { name: 'Inventory', href: '/inventory', icon: CubeIcon },
     { name: 'Jasa', href: '/services', icon: WrenchScrewdriverIcon },

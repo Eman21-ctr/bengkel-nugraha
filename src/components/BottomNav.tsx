@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
-    ChartBarIcon,
+    HomeIcon,
     ShoppingCartIcon,
     CubeIcon,
     UserGroupIcon,
@@ -13,7 +13,7 @@ import {
 import clsx from 'clsx'
 
 const navigation = [
-    { name: 'Home', href: '/', icon: ChartBarIcon },
+    { name: 'Home', href: '/', icon: HomeIcon },
     { name: 'Kasir', href: '/transactions', icon: ShoppingCartIcon },
     { name: 'Stok', href: '/inventory', icon: CubeIcon },
     { name: 'Setting', href: '/settings', icon: Cog6ToothIcon },
