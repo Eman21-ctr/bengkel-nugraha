@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useTransition } from 'react'
+import { useState, useEffect, useTransition, useCallback } from 'react'
 import { Cog6ToothIcon, BuildingStorefrontIcon, GiftIcon, UserCircleIcon, ArrowRightOnRectangleIcon } from '@heroicons/react/24/outline'
 import { getStoreProfile, updateStoreProfile, getPointConfig, updatePointConfig, getCurrentUser, logout } from './actions'
 import { useActionState } from 'react'
@@ -18,7 +18,7 @@ export default function SettingsPage() {
     const [isPending, startTransition] = useTransition()
     const router = useRouter()
 
-    useEffect(() => {
+    const fetchData = useCallback(() => {
         startTransition(async () => {
             const [profile, points, userData] = await Promise.all([
                 getStoreProfile(),
@@ -31,8 +31,12 @@ export default function SettingsPage() {
         })
     }, [])
 
+    useEffect(() => {
+        fetchData()
+    }, [fetchData])
+
     const tabs: { id: Tab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
-        { id: 'profile', label: 'Profil Toko', icon: BuildingStorefrontIcon },
+        { id: 'profile', label: 'Profil Usaha', icon: BuildingStorefrontIcon },
         { id: 'points', label: 'Konfigurasi Poin', icon: GiftIcon },
         { id: 'account', label: 'Akun', icon: UserCircleIcon }
     ]
@@ -52,7 +56,7 @@ export default function SettingsPage() {
                     <Cog6ToothIcon className="w-8 h-8 text-primary" />
                     <div>
                         <h1 className="text-2xl font-bold text-gray-900">Pengaturan</h1>
-                        <p className="text-sm text-gray-500">Konfigurasi aplikasi dan toko</p>
+                        <p className="text-sm text-gray-500">Konfigurasi aplikasi dan profil usaha</p>
                     </div>
                 </div>
             </div>
@@ -79,10 +83,10 @@ export default function SettingsPage() {
             {/* Content */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                 {activeTab === 'profile' && (
-                    <StoreProfileForm initialData={storeProfile} onUpdate={setStoreProfile} />
+                    <StoreProfileForm initialData={storeProfile} onUpdate={fetchData} />
                 )}
                 {activeTab === 'points' && (
-                    <PointConfigForm initialData={pointConfig} onUpdate={setPointConfig} />
+                    <PointConfigForm initialData={pointConfig} onUpdate={fetchData} />
                 )}
                 {activeTab === 'account' && (
                     <AccountSection user={user} onLogout={handleLogout} />
@@ -93,24 +97,24 @@ export default function SettingsPage() {
 }
 
 // Store Profile Form
-function StoreProfileForm({ initialData, onUpdate }: { initialData: any; onUpdate: (data: any) => void }) {
+function StoreProfileForm({ initialData, onUpdate }: { initialData: any; onUpdate: () => void }) {
     const [state, formAction] = useActionState(updateStoreProfile, null)
 
     useEffect(() => {
         if (state?.success) {
-            // Optionally reload data
+            onUpdate()
         }
-    }, [state])
+    }, [state, onUpdate])
 
     return (
         <div>
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Profil Toko</h3>
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Profil Usaha</h3>
             <form action={formAction} className="space-y-4 max-w-lg">
                 {state?.error && <p className="text-red-600 text-sm bg-red-50 p-2 rounded">{state.error}</p>}
                 {state?.success && <p className="text-green-600 text-sm bg-green-50 p-2 rounded">✅ Tersimpan!</p>}
 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700">Nama Toko</label>
+                    <label className="block text-sm font-medium text-gray-700">Nama Usaha</label>
                     <input type="text" name="name" defaultValue={initialData.name} required className="input-std" />
                 </div>
 
@@ -136,8 +140,14 @@ function StoreProfileForm({ initialData, onUpdate }: { initialData: any; onUpdat
 }
 
 // Point Config Form
-function PointConfigForm({ initialData, onUpdate }: { initialData: any; onUpdate: (data: any) => void }) {
+function PointConfigForm({ initialData, onUpdate }: { initialData: any; onUpdate: () => void }) {
     const [state, formAction] = useActionState(updatePointConfig, null)
+
+    useEffect(() => {
+        if (state?.success) {
+            onUpdate()
+        }
+    }, [state, onUpdate])
 
     return (
         <div>

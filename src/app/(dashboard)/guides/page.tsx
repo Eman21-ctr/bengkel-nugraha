@@ -10,7 +10,9 @@ import {
     UserGroupIcon,
     DocumentChartBarIcon,
     Cog6ToothIcon,
-    ArrowLeftIcon
+    ArrowLeftIcon,
+    DevicePhoneMobileIcon,
+    ClipboardDocumentCheckIcon
 } from '@heroicons/react/24/outline'
 import Link from 'next/link'
 import clsx from 'clsx'
@@ -18,90 +20,113 @@ import clsx from 'clsx'
 const guides = [
     {
         id: 'intro',
-        title: 'Memulai Aplikasi',
-        icon: BookOpenIcon,
+        title: 'Navigasi & Tampilan',
+        icon: DevicePhoneMobileIcon,
         content: (
-            <ul className="list-disc ml-5 space-y-2 text-sm text-gray-600">
-                <li>Login menggunakan email dan password yang telah didaftarkan.</li>
-                <li>Pastikan koneksi internet stabil untuk sinkronisasi data real-time dengan Supabase.</li>
-                <li>Pada dashboard utama, Anda akan melihat ringkasan pemasukan hari ini.</li>
-            </ul>
+            <div className="space-y-3 text-sm text-gray-600">
+                <p>Aplikasi ini memiliki optimasi tampilan khusus untuk HP (BCA Style) dan Desktop.</p>
+                <ul className="list-disc ml-5 space-y-1">
+                    <li><b>HP:</b> Gunakan Bottom Nav (Home, Kasir, Stok, Setting) untuk akses cepat. Menu tambahan ada di Dashboard.</li>
+                    <li><b>Desktop:</b> Sidebar di kiri memberikan akses ke semua fitur secara lengkap.</li>
+                    <li><b>Header Biru:</b> Di HP, bagian atas menunjukkan Ringkasan Pemasukan hari ini secara real-time.</li>
+                </ul>
+            </div>
         )
     },
     {
         id: 'bengkel',
-        title: 'Transaksi Bengkel',
+        title: 'Alur Kasir Bengkel',
         icon: WrenchScrewdriverIcon,
         content: (
-            <ul className="list-disc ml-5 space-y-2 text-sm text-gray-600">
-                <li>Buka menu <b>Kasir</b> dan pilih tab <b>Bengkel</b>.</li>
-                <li>Input <b>Nomor Polisi</b> kendaraan untuk melacak riwayat servis motor tersebut.</li>
-                <li>Pilih <b>Layanan Servis</b> (misal: Ganti Oli, Servis Rutin) dan <b>Sparepart</b> yang digunakan.</li>
-                <li>Klik <b>Bayar</b>, pilih metode pembayaran, dan simpan transaksi. Anda bisa mencetak struk jika diperlukan.</li>
-            </ul>
+            <div className="space-y-3 text-sm text-gray-600">
+                <p>Kasir Bengkel terintegrasi dengan data Member dan Nopol kendaraan.</p>
+                <ol className="list-decimal ml-5 space-y-2">
+                    <li>Buka menu <b>Kasir</b>, pastikan Tab aktif adalah <b>Bengkel</b> (Warna Biru).</li>
+                    <li><b>Cari Member/Nopol:</b> Masukkan Nama atau Nomor Polisi di bagian pencarian. Ini penting untuk mencatat riwayat servis kendaraan.</li>
+                    <li><b>Pilih Layanan:</b> Klik icon <b>Servis</b> (Hijau) untuk memilih jasa servis yang dilakukan.</li>
+                    <li><b>Pilih Sparepart:</b> Klik item barang dari daftar <b>Gudang</b>. Stok akan otomatis berkurang saat transaksi selesai.</li>
+                    <li><b>Gunakan Poin:</b> Jika member punya poin, Anda bisa memasukkan jumlah poin yang ingin digunakan sebagai diskon.</li>
+                    <li><b>Proses Bayar:</b> Klik <b>Bayar</b>, input nominal uang, dan simpan. Sistem akan mencatat riwayat ke <b>Stock Movement</b>.</li>
+                </ol>
+            </div>
         )
     },
     {
         id: 'kafe',
-        title: 'Transaksi Kafe',
+        title: 'Alur Kasir Kafe',
         icon: ShoppingCartIcon,
         content: (
-            <ul className="list-disc ml-5 space-y-2 text-sm text-gray-600">
-                <li>Buka menu <b>Kasir</b> dan pilih tab <b>Kafe</b>.</li>
-                <li>Pilih item menu (Makanan/Minuman) yang dipesan pelanggan.</li>
-                <li>Anda bisa menambah jumlah (QTY) untuk setiap item.</li>
-                <li>Selesaikan transaksi dengan menekan tombol <b>Bayar</b> di bagian bawah.</li>
-            </ul>
+            <div className="space-y-3 text-sm text-gray-600">
+                <p>Kasir Kafe didesain untuk transaksi cepat produk makanan/minuman.</p>
+                <ol className="list-decimal ml-5 space-y-2">
+                    <li>Pindah ke Tab <b>Kafe</b> di menu Kasir.</li>
+                    <li>Pilih produk Kafe dari daftar yang muncul. Anda bisa menggunakan <b>Barcode Scanner</b> jika tersedia.</li>
+                    <li>Klik item untuk menambah jumlah pesanan (QTY).</li>
+                    <li>Selesaikan dengan pembayaran (Tunai atau QRIS).</li>
+                </ol>
+            </div>
         )
     },
     {
         id: 'inventory',
-        title: 'Manajemen Stok (Gudang)',
+        title: 'Gudang & Stok Barang',
         icon: CubeIcon,
         content: (
-            <ul className="list-disc ml-5 space-y-2 text-sm text-gray-600">
-                <li>Menu <b>Gudang/Stok</b> digunakan untuk mengelola data barang.</li>
-                <li>Setiap barang memiliki <b>Stok Minimal</b>. Jika stok di bawah angka ini, akan muncul notifikasi "Stok Menipis" di dashboard.</li>
-                <li>Gunakan fitur <b>Edit</b> untuk menambah stok barang yang baru masuk (restock).</li>
-                <li>Anda bisa mencari barang berdasarkan nama atau kategori.</li>
-            </ul>
-        )
-    },
-    {
-        id: 'members',
-        title: 'Manajemen Member',
-        icon: UserGroupIcon,
-        content: (
-            <ul className="list-disc ml-5 space-y-2 text-sm text-gray-600">
-                <li>Daftarkan pelanggan setia sebagai <b>Member</b>.</li>
-                <li>Member memudahkan pencarian nama saat transaksi sehingga riwayat belanja mereka terekam dengan baik.</li>
-                <li>Cukup input Nama dan Nomor Telepon pelanggan di menu Member.</li>
-            </ul>
+            <div className="space-y-3 text-sm text-gray-600">
+                <p>Pusat kontrol logistik bengkel dan kafe.</p>
+                <ul className="list-disc ml-5 space-y-1">
+                    <li><b>Tambah Barang:</b> Masukkan nama, kategori, harga beli (HPP), harga jual, dan stok awal.</li>
+                    <li><b>Stok Menipis:</b> Barang dengan stok di bawah <b>Min. Stok</b> akan otomatis muncul di Dashboard sebagai peringatan.</li>
+                    <li><b>Restock:</b> Klik icon <b>Gudang/Plus</b> pada barang untuk menambah stok saat ada barang masuk dari supplier.</li>
+                    <li><b>History:</b> Setiap penjualan dan restock terekam di riwayat pergerakan stok.</li>
+                </ul>
+            </div>
         )
     },
     {
         id: 'reports',
-        title: 'Laporan Keuangan',
+        title: 'Membaca Laporan',
         icon: DocumentChartBarIcon,
         content: (
-            <ul className="list-disc ml-5 space-y-2 text-sm text-gray-600">
-                <li>Buka menu <b>Laporan</b> untuk melihat analisis bisnis Anda.</li>
-                <li>Laporan terbagi menjadi <b>Pemasukan Total</b>, <b>Bengkel</b>, dan <b>Kafe</b>.</li>
-                <li>Anda bisa memfilter laporan berdasarkan jangka waktu (Hari Ini, Minggu Ini, Bulan Ini).</li>
-                <li>Lihat rincian penjualan per item untuk mengetahui menu atau layanan mana yang paling banyak diminati.</li>
-            </ul>
+            <div className="space-y-3 text-sm text-gray-600">
+                <p>Analisis performa bisnis Nugraha Bengkel & Kafe.</p>
+                <ul className="list-disc ml-5 space-y-1">
+                    <li><b>Sales Summary:</b> Melihat total pemasukan kotor dari Bengkel vs Kafe.</li>
+                    <li><b>Top Items:</b> Mengetahui sparepart atau menu kafe mana yang paling laku (Best Seller).</li>
+                    <li><b>Filter Waktu:</b> Anda bisa melihat laporan Hari Ini, Bulan Ini, atau rentang waktu kustom (Custom Date).</li>
+                    <li><b>Poin Member:</b> Memantau penggunaan poin dan loyalitas pelanggan.</li>
+                </ul>
+            </div>
         )
     },
     {
         id: 'settings',
-        title: 'Pengaturan & Profil',
+        title: 'Pengaturan Profil Usaha',
         icon: Cog6ToothIcon,
         content: (
-            <ul className="list-disc ml-5 space-y-2 text-sm text-gray-600">
-                <li>Buka menu <b>Setting</b> untuk mengubah nama toko, alamat, dan nomor telepon yang akan muncul di struk.</li>
-                <li>Anda juga bisa mengelola daftar <b>Layanan Servis</b> (menambah jasa baru atau mengubah harga jasa).</li>
-                <li>Tombol <b>Logout</b> tersedia di bagian atas dashboard untuk keluar dari akun.</li>
-            </ul>
+            <div className="space-y-3 text-sm text-gray-600">
+                <p>Hub pusat identitas usaha Anda.</p>
+                <ul className="list-disc ml-5 space-y-1">
+                    <li><b>Profil Usaha:</b> Ubah Nama Usaha, Alamat, dan No. Telepon yang akan tercetak di Struk (Nota).</li>
+                    <li><b>Sistem Poin:</b> Atur berapa belanja minimum untuk mendapatkan 1 poin, dan nilai tukar 1 poin rupiahnya.</li>
+                    <li><b>Daftar Layanan:</b> Kelola biaya jasa servis motor di menu <b>Services/Layanan</b> (Tambah/Edit Jasa).</li>
+                </ul>
+            </div>
+        )
+    },
+    {
+        id: 'troubleshoot',
+        title: 'Masalah & Sinkronisasi',
+        icon: ClipboardDocumentCheckIcon,
+        content: (
+            <div className="space-y-3 text-sm text-gray-600">
+                <p>Tips jika aplikasi terasa lambat atau ada kendala.</p>
+                <ul className="list-disc ml-5 space-y-1">
+                    <li>Aplikasi ini menggunakan teknologi <b>Real-time Sync</b>. Pastikan internet aktif saat menekan tombol Simpan.</li>
+                    <li>Jika data tidak muncul setelah diedit, coba <b>Refresh</b> halaman atau Logout dan Login kembali.</li>
+                    <li><b>Keamanan:</b> Gunakan password yang kuat dan lakukan Logout jika perangkat digunakan bersama.</li>
+                </ul>
+            </div>
         )
     }
 ]
@@ -120,8 +145,8 @@ export default function GuidePage() {
                     <ArrowLeftIcon className="w-5 h-5" />
                 </Link>
                 <div>
-                    <h1 className="text-xl font-black text-gray-900 leading-none">Panduan Aplikasi</h1>
-                    <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">Manual Penggunaan Fitur</p>
+                    <h1 className="text-xl font-black text-gray-900 leading-none">Buku Panduan</h1>
+                    <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">Manual Operasional Aplikasi</p>
                 </div>
             </div>
 
@@ -160,7 +185,7 @@ export default function GuidePage() {
 
                             <div className={clsx(
                                 "transition-all duration-300 ease-in-out",
-                                isOpen ? "max-h-[500px] opacity-100 border-t border-gray-50 bg-slate-50/30" : "max-h-0 opacity-0 pointer-events-none"
+                                isOpen ? "max-h-[800px] opacity-100 border-t border-gray-50 bg-slate-50/30" : "max-h-0 opacity-0 pointer-events-none"
                             )}>
                                 <div className="p-6">
                                     {guide.content}
@@ -171,10 +196,9 @@ export default function GuidePage() {
                 })}
             </div>
 
-            {/* Footer Info */}
             <div className="px-6 text-center text-gray-400 mt-8 mb-4">
                 <p className="text-[10px] font-black uppercase tracking-widest">Nugraha Bengkel & Kafe v1.0</p>
-                <p className="text-[9px] font-medium mt-1">Sistem Manajemen Bisnis Terintegrasi</p>
+                <p className="text-[9px] font-medium mt-1">Didesain khusus untuk operasional harian terpadu</p>
             </div>
         </div>
     )
