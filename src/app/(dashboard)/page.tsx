@@ -63,18 +63,26 @@ export default async function Dashboard() {
 
       {/* MOBILE HEADER (BCA Style) */}
       <div className="md:hidden relative bg-gradient-to-br from-blue-600 to-blue-500 pb-16 pt-8 px-6 rounded-b-[40px] shadow-xl shadow-blue-200/50 overflow-hidden">
-        <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-2xl" />
         <div className="relative z-10 flex flex-col gap-6">
           <div className="flex justify-between items-center">
             <h2 className="text-white font-black text-xl tracking-tighter italic">BENGKEL<span className="text-blue-200">mobile</span></h2>
-            <div className="bg-white/20 p-2 rounded-xl backdrop-blur-md">
-              <ClockIcon className="w-5 h-5 text-white" />
-            </div>
+            <form action={async () => {
+              'use server'
+              const supabase = await createClient()
+              await supabase.auth.signOut()
+              redirect('/login')
+            }}>
+              <button className="bg-white/20 p-2 rounded-xl backdrop-blur-md active:bg-white/30 transition-colors">
+                <ArrowUpRightIcon className="w-5 h-5 text-white rotate-45" />
+              </button>
+            </form>
           </div>
           <div className="flex justify-between items-end">
             <div className="space-y-0.5">
               <p className="text-blue-100 text-xs font-medium uppercase tracking-widest leading-none">Selamat {greeting},</p>
-              <h1 className="text-3xl font-black text-white tracking-tight leading-none uppercase">{user.email?.split('@')[0] || 'Nugraha'}</h1>
+              <h1 className="text-3xl font-black text-white tracking-tight leading-none capitalize">
+                {user.email?.split('@')[0] || 'Nugraha'}
+              </h1>
             </div>
             <div className="w-12 h-12 rounded-full border-2 border-white/30 overflow-hidden shadow-lg p-0.5">
               <div className="w-full h-full bg-blue-400 rounded-full flex items-center justify-center">
