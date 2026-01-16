@@ -222,6 +222,5 @@ export default async function Dashboard() {
         </div>
       </div>
     </div>
-    </div >
   )
 }
