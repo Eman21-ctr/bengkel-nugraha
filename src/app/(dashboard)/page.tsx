@@ -35,6 +35,16 @@ export default async function Dashboard() {
     }).format(amount)
   }
 
+  function getGreeting() {
+    const hour = new Date().getHours()
+    if (hour >= 4 && hour < 11) return 'Pagi'
+    if (hour >= 11 && hour < 15) return 'Siang'
+    if (hour >= 15 && hour < 19) return 'Sore'
+    return 'Malam'
+  }
+
+  const greeting = getGreeting()
+
   const quickActions = [
     { name: 'Kasir', href: '/transactions', icon: ShoppingCartIcon, color: 'bg-blue-500' },
     { name: 'Gudang', href: '/inventory', icon: CubeIcon, color: 'bg-orange-500' },
@@ -50,17 +60,27 @@ export default async function Dashboard() {
       <div className="absolute top-1/2 -left-24 w-72 h-72 bg-blue-400/10 rounded-full blur-3xl pointer-events-none" />
 
       <div className="relative max-w-7xl mx-auto space-y-8 pb-20 md:pb-8">
-        {/* Header with Glassmorphism feel */}
-        <header className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Dashboard</h1>
-            <p className="text-gray-500 mt-1">Selamat datang kembali, <span className="text-primary font-semibold">{user.email?.split('@')[0]}</span></p>
+        {/* Header with Premium Feel */}
+        <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div className="space-y-1">
+            <h1 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tight leading-tight">
+              Selamat {greeting}, <span className="text-primary transition-colors hover:text-blue-700">Nugraha!</span>
+            </h1>
+            <p className="text-gray-500 text-lg font-medium flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+              Semoga usaha lancar hari ini
+            </p>
           </div>
-          <div className="hidden md:flex items-center gap-2 bg-white/80 backdrop-blur-sm px-4 py-2 rounded-full shadow-sm border border-white/50">
-            <ClockIcon className="w-4 h-4 text-gray-400" />
-            <span className="text-xs font-medium text-gray-600">
-              {new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' })}
-            </span>
+          <div className="hidden md:flex items-center gap-3 bg-white px-5 py-3 rounded-2xl shadow-sm border border-gray-100">
+            <div className="bg-blue-50 p-2 rounded-xl">
+              <ClockIcon className="w-5 h-5 text-primary" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider tabular-nums leading-none">Waktu Server</span>
+              <span className="text-sm font-black text-gray-700 tabular-nums leading-none mt-1">
+                {new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+              </span>
+            </div>
           </div>
         </header>
 
@@ -146,20 +166,21 @@ export default async function Dashboard() {
         </div>
       </div>
 
-      {/* Mobile Quick Actions */}
-      <div className="md:hidden">
-        <h3 className="text-sm font-bold text-gray-900 mb-4 px-1">Akses Cepat</h3>
-        <div className="grid grid-cols-4 gap-3">
+      {/* Premium Quick Actions */}
+      <div className="space-y-4">
+        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-[0.2em] px-1 italic">Menu Transaksi Cepat</h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {quickActions.map((action) => (
             <Link
               key={action.name}
               href={action.href}
-              className="flex flex-col items-center gap-2"
+              className="group relative flex flex-col items-center justify-center gap-3 p-6 bg-white border border-gray-100 rounded-[24px] shadow-sm hover:shadow-xl hover:translate-y-[-4px] transition-all overflow-hidden"
             >
-              <div className={clsx("w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg text-white", action.color)}>
+              <div className={clsx("absolute inset-0 opacity-0 group-hover:opacity-5 transition-opacity bg-current", action.color.replace('bg-', 'text-'))} />
+              <div className={clsx("w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg text-white transition-transform group-hover:scale-110", action.color)}>
                 <action.icon className="w-7 h-7" />
               </div>
-              <span className="text-[10px] font-bold text-gray-600 uppercase tracking-tight">{action.name}</span>
+              <span className="text-xs font-black text-gray-700 uppercase tracking-widest">{action.name}</span>
             </Link>
           ))}
         </div>
@@ -167,56 +188,65 @@ export default async function Dashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Low Stock Detailed List */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="p-5 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
-            <h2 className="font-bold text-gray-900 flex items-center gap-2">
+        <div className="bg-white rounded-[32px] shadow-sm border border-gray-100 overflow-hidden">
+          <div className="p-7 border-b border-gray-50 flex justify-between items-center bg-gray-50/30">
+            <h2 className="font-black text-gray-900 flex items-center gap-3 uppercase tracking-wider text-sm">
               <ExclamationTriangleIcon className="w-5 h-5 text-accent" />
               Alert Stok Menipis
             </h2>
-            <Link href="/inventory" className="text-primary text-xs font-bold hover:underline">Lihat Semua</Link>
+            <Link href="/inventory" className="text-primary text-[10px] font-black uppercase tracking-widest hover:underline bg-blue-50 px-3 py-1.5 rounded-full">Lihat Semua</Link>
           </div>
           <div className="p-0">
             {stats.lowStockItems.length > 0 ? (
               <div className="divide-y divide-gray-50">
                 {stats.lowStockItems.map((item) => (
-                  <div key={item.id} className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-                        <CubeIcon className="w-5 h-5 text-gray-400" />
+                  <div key={item.id} className="flex items-center justify-between p-6 hover:bg-blue-50/30 transition-colors">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center border border-gray-100">
+                        <CubeIcon className="w-6 h-6 text-gray-400" />
                       </div>
                       <div>
-                        <p className="text-sm font-bold text-gray-900">{item.name}</p>
-                        <p className="text-[10px] text-gray-500">Min. Stok: {item.min_stock} {item.unit}</p>
+                        <p className="text-sm font-black text-gray-900 uppercase tracking-tight">{item.name}</p>
+                        <p className="text-[10px] text-gray-400 font-bold uppercase">Minimal: {item.min_stock} {item.unit}</p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-black text-red-600">{item.stock}</p>
-                      <p className="text-[10px] text-gray-400 uppercase font-bold tracking-tighter">{item.unit}</p>
+                      <p className="text-lg font-black text-red-600 leading-none">{item.stock}</p>
+                      <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">{item.unit}</p>
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="text-gray-400 text-center py-12 flex flex-col items-center gap-2">
-                <span className="text-4xl">🎉</span>
-                <p className="text-sm font-medium">Mantap! Semua stok aman.</p>
+              <div className="text-gray-400 text-center py-16 flex flex-col items-center gap-3">
+                <div className="bg-green-50 p-6 rounded-full">
+                  <span className="text-5xl">🎉</span>
+                </div>
+                <div>
+                  <p className="text-sm font-black text-gray-900 uppercase tracking-widest">Semua Stok Aman</p>
+                  <p className="text-xs text-gray-500 font-medium">Bekerja dengan luar biasa!</p>
+                </div>
               </div>
             )}
           </div>
         </div>
 
-        {/* Banner / Info Card */}
-        <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-3xl p-8 text-white relative overflow-hidden flex flex-col justify-center">
-          <div className="absolute -bottom-10 -right-10 opacity-10">
-            <WrenchScrewdriverIcon className="w-64 h-64" />
-          </div>
-          <h2 className="text-2xl font-bold mb-4 relative z-10">Tingkatkan Performa Bengkel & Kafe Anda 🚀</h2>
-          <p className="text-gray-300 mb-6 text-sm leading-relaxed relative z-10">
-            Kelola transaksi, pantau stok barang secara real-time, dan berikan layanan terbaik untuk pelanggan setia Anda.
-          </p>
-          <div className="flex gap-3 relative z-10">
-            <Link href="/transactions" className="bg-primary hover:bg-primary/90 text-white px-6 py-2.5 rounded-full font-bold text-sm transition-all shadow-lg shadow-primary/20">
+        {/* Premium Banner / Info Card */}
+        <div className="bg-[#1A1C1E] rounded-[32px] p-10 text-white relative overflow-hidden flex flex-col justify-center shadow-2xl shadow-gray-200">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-primary/20 rounded-full blur-[100px] pointer-events-none" />
+          <div className="absolute -bottom-20 -left-20 w-80 h-80 bg-blue-500/10 rounded-full blur-[100px] pointer-events-none" />
+
+          <div className="relative z-10">
+            <div className="bg-white/10 backdrop-blur-md w-fit px-4 py-1.5 rounded-full border border-white/10 mb-6">
+              <span className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-400">Pro Feature</span>
+            </div>
+            <h2 className="text-3xl font-black mb-4 leading-tight tracking-tight">Tingkatkan Performa <br /><span className="text-blue-400 capitalize">Bengkel & Kafe Nugraha</span> Anda 🚀</h2>
+            <p className="text-gray-400 mb-8 text-base leading-relaxed max-w-md">
+              Kelola transaksi, pantau stok barang secara real-time, dan berikan layanan terbaik untuk pelanggan setia Anda.
+            </p>
+            <Link href="/transactions" className="inline-flex items-center gap-3 bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-2xl font-black text-sm transition-all shadow-xl shadow-blue-500/20 group">
               Buka Kasir Sekarang
+              <ArrowUpRightIcon className="w-4 h-4 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
             </Link>
           </div>
         </div>
