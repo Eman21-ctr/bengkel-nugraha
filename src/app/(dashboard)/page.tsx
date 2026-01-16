@@ -8,7 +8,9 @@ import {
   CubeIcon,
   WrenchScrewdriverIcon,
   UserGroupIcon,
-  ClockIcon
+  ClockIcon,
+  DocumentChartBarIcon,
+  BookOpenIcon
 } from '@heroicons/react/24/outline'
 import { getDashboardStats } from './actions'
 import Link from 'next/link'
@@ -45,6 +47,13 @@ export default async function Dashboard() {
 
   const greeting = getGreeting()
 
+  const dashboardActions = [
+    { name: 'Servis', href: '/services', icon: WrenchScrewdriverIcon, color: 'bg-green-500' },
+    { name: 'Member', href: '/members', icon: UserGroupIcon, color: 'bg-purple-500' },
+    { name: 'Laporan', href: '/reports', icon: DocumentChartBarIcon, color: 'bg-blue-600' },
+    { name: 'Panduan', href: '/guides', icon: BookOpenIcon, color: 'bg-orange-500' },
+  ]
+
   const quickActions = [
     { name: 'Kasir', href: '/transactions', icon: ShoppingCartIcon, color: 'bg-blue-500' },
     { name: 'Gudang', href: '/inventory', icon: CubeIcon, color: 'bg-orange-500' },
@@ -78,16 +87,11 @@ export default async function Dashboard() {
             </form>
           </div>
           <div className="flex justify-between items-end">
-            <div className="space-y-0.5">
-              <p className="text-blue-100 text-xs font-medium uppercase tracking-widest leading-none">Selamat {greeting},</p>
-              <h1 className="text-3xl font-black text-white tracking-tight leading-none capitalize">
-                {user.email?.split('@')[0] || 'Nugraha'}
+            <div className="space-y-1">
+              <p className="text-blue-100 text-xs font-bold tracking-wide leading-none">Selamat {greeting},</p>
+              <h1 className="text-3xl font-black text-white tracking-tight leading-none">
+                <span className="capitalize">{user.email?.split('@')[0] || 'Nugraha'}</span>
               </h1>
-            </div>
-            <div className="w-12 h-12 rounded-full border-2 border-white/30 overflow-hidden shadow-lg p-0.5">
-              <div className="w-full h-full bg-blue-400 rounded-full flex items-center justify-center">
-                <span className="text-white font-black text-sm">{user.email?.charAt(0).toUpperCase()}</span>
-              </div>
             </div>
           </div>
           <div className="flex flex-col gap-1">
@@ -243,7 +247,24 @@ export default async function Dashboard() {
         {/* Premium Quick Actions */}
         <div className="space-y-4">
           <h3 className="hidden md:block text-xs font-bold text-gray-400 uppercase tracking-[0.2em] px-1 italic">Menu Transaksi Cepat</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {/* Mobile Actions */}
+          <div className="md:hidden grid grid-cols-2 gap-4">
+            {dashboardActions.map((action) => (
+              <Link
+                key={action.name}
+                href={action.href}
+                className="group relative flex flex-col items-center justify-center gap-3 p-6 bg-white border border-gray-100 rounded-[28px] shadow-sm hover:shadow-xl hover:translate-y-[-4px] transition-all overflow-hidden active:scale-95"
+              >
+                <div className={clsx("absolute inset-0 opacity-0 group-hover:opacity-5 transition-opacity bg-current", action.color.replace('bg-', 'text-'))} />
+                <div className={clsx("w-16 h-16 rounded-[22px] flex items-center justify-center shadow-lg text-white transition-transform group-hover:scale-110", action.color)}>
+                  <action.icon className="w-8 h-8" />
+                </div>
+                <span className="text-xs font-black text-gray-700 uppercase tracking-widest">{action.name}</span>
+              </Link>
+            ))}
+          </div>
+          {/* Desktop Actions */}
+          <div className="hidden md:grid grid-cols-4 gap-4">
             {quickActions.map((action) => (
               <Link
                 key={action.name}
@@ -251,10 +272,10 @@ export default async function Dashboard() {
                 className="group relative flex flex-col items-center justify-center gap-3 p-6 bg-white border border-gray-100 rounded-[28px] shadow-sm hover:shadow-xl hover:translate-y-[-4px] transition-all overflow-hidden active:scale-95"
               >
                 <div className={clsx("absolute inset-0 opacity-0 group-hover:opacity-5 transition-opacity bg-current", action.color.replace('bg-', 'text-'))} />
-                <div className={clsx("w-16 h-16 md:w-14 md:h-14 rounded-[22px] flex items-center justify-center shadow-lg text-white transition-transform group-hover:scale-110", action.color)}>
-                  <action.icon className="w-8 h-8 md:w-7 md:h-7" />
+                <div className={clsx("w-14 h-14 rounded-[22px] flex items-center justify-center shadow-lg text-white transition-transform group-hover:scale-110", action.color)}>
+                  <action.icon className="w-7 h-7" />
                 </div>
-                <span className="text-xs md:text-[10px] font-black text-gray-700 uppercase tracking-widest">{action.name}</span>
+                <span className="text-[10px] font-black text-gray-700 uppercase tracking-widest">{action.name}</span>
               </Link>
             ))}
           </div>

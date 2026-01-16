@@ -14,11 +14,9 @@ import clsx from 'clsx'
 
 const navigation = [
     { name: 'Home', href: '/', icon: ChartBarIcon },
-    { name: 'Transaksi', href: '/transactions', icon: ShoppingCartIcon },
+    { name: 'Kasir', href: '/transactions', icon: ShoppingCartIcon },
     { name: 'Stok', href: '/inventory', icon: CubeIcon },
-    { name: 'Member', href: '/members', icon: UserGroupIcon },
-    { name: 'Laporan', href: '/reports', icon: DocumentChartBarIcon },
-    { name: 'Setting', href: '/settings', icon: Cog6ToothIcon }, // Services and Settings merged in logic or accessible via settings
+    { name: 'Setting', href: '/settings', icon: Cog6ToothIcon },
 ]
 
 export default function BottomNav() {
