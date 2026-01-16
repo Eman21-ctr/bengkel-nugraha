@@ -11,6 +11,14 @@ const jakarta = Plus_Jakarta_Sans({
 export const metadata: Metadata = {
   title: "Nugraha Bengkel & Kafe",
   description: "Sistem Manajemen Bengkel dan Kafe Terintegrasi",
+  manifest: "/manifest.json",
+  themeColor: "#2563eb",
+  viewport: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Nugraha",
+  },
 };
 
 export default function RootLayout({
