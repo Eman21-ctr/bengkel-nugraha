@@ -3,9 +3,20 @@
 import { createClient } from '@/utils/supabase/server'
 export async function getDashboardStats() {
     const supabase = await createClient()
+    // Force calculation to Asia/Jakarta (WIB)
     const now = new Date()
-    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString()
-    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59).toISOString()
+    const formatter = new Intl.DateTimeFormat('en-CA', { // yyyy-mm-dd
+        timeZone: 'Asia/Jakarta',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+    })
+    const [{ value: year }, , { value: month }, , { value: day }] = formatter.formatToParts(now)
+
+    // Start of day in WIB: yyyy-mm-dd 00:00:00+07
+    const start = `${year}-${month}-${day}T00:00:00+07:00`
+    // End of day in WIB: yyyy-mm-dd 23:59:59+07
+    const end = `${year}-${month}-${day}T23:59:59+07:00`
 
     // 1. Get transactions count and total revenue today
     const { data: transData, error: transError } = await supabase
