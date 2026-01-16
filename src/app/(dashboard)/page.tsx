@@ -125,7 +125,13 @@ export default async function Dashboard() {
             <div className="flex flex-col">
               <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider tabular-nums leading-none">Waktu Server</span>
               <span className="text-sm font-black text-gray-700 tabular-nums leading-none mt-1">
-                {new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                {new Date().toLocaleDateString('id-ID', {
+                  timeZone: 'Asia/Jakarta',
+                  weekday: 'long',
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric'
+                })}
               </span>
             </div>
           </div>
