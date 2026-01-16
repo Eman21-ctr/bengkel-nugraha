@@ -19,6 +19,10 @@ export const metadata: Metadata = {
     statusBarStyle: "default",
     title: "Nugraha",
   },
+  icons: {
+    icon: "/icon-192.png",
+    apple: "/apple-icon.png",
+  },
 };
 
 export default function RootLayout({
