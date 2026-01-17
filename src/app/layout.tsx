@@ -34,6 +34,17 @@ export default function RootLayout({
     <html lang="id">
       <body className={`${jakarta.variable} font-sans antialiased`}>
         {children}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
+                window.addEventListener('load', function() {
+                  navigator.serviceWorker.register('/sw.js');
+                });
+              }
+            `,
+          }}
+        />
       </body>
     </html>
   );
