@@ -23,8 +23,8 @@ export default function QueueDisplayPage() {
         }
     }, [])
 
-    const waiting = queues.filter(q => q.status === 'waiting')
-    const processing = queues.filter(q => q.status === 'processing')
+    const waiting = queues.filter(q => q.status === 'Menunggu')
+    const processing = queues.filter(q => q.status === 'Sedang Dilayani')
 
     return (
         <div className="min-h-screen bg-[#0f172a] text-white p-8 font-sans overflow-hidden flex flex-col">
