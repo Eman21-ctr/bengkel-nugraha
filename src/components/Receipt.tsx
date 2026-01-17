@@ -24,46 +24,56 @@ type ReceiptProps = {
             points: number
         } | null
     }
+    showOnScreen?: boolean
 }
 
-export function Receipt({ storeInfo, transaction }: ReceiptProps) {
+export function Receipt({ storeInfo, transaction, showOnScreen = false }: ReceiptProps) {
     const formatCurrency = (amount: number) =>
         new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount)
 
+    const containerClasses = showOnScreen
+        ? "w-full max-w-[80mm] mx-auto p-4 text-black font-mono text-sm leading-tight bg-white border border-gray-100 shadow-inner rounded-xl"
+        : "hidden print:block w-[80mm] p-4 text-black font-mono text-sm leading-tight bg-white"
+
     return (
-        <div id="receipt-print" className="hidden print:block w-[80mm] p-4 text-black font-mono text-sm leading-tight bg-white">
+        <div id={showOnScreen ? undefined : "receipt-print"} className={containerClasses}>
             <div className="text-center border-b border-dashed border-black pb-2 mb-2">
-                <h2 className="text-lg font-bold uppercase">{storeInfo.name}</h2>
-                <p className="text-xs">{storeInfo.address}</p>
-                <p className="text-xs">Telp: {storeInfo.phone}</p>
+                <h2 className="text-lg font-bold uppercase tracking-tighter">{storeInfo.name}</h2>
+                <p className="text-[10px] leading-tight">{storeInfo.address}</p>
+                <p className="text-[10px]">Telp: {storeInfo.phone}</p>
             </div>
 
-            <div className="mb-2 text-xs">
+            <div className="mb-2 text-[10px]">
                 <div className="flex justify-between">
-                    <span>No: {transaction.invoice}</span>
+                    <span>No: {transaction.invoice || 'DRAFT'}</span>
                     <span>{new Date(transaction.date).toLocaleDateString('id-ID')}</span>
                 </div>
                 <div className="flex justify-between">
                     <span>Tipe: {transaction.type.toUpperCase()}</span>
                     <span>{new Date(transaction.date).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
+                {transaction.member && (
+                    <div className="mt-1 border-t border-gray-100 pt-1">
+                        <span>Pelanggan: {transaction.member.name}</span>
+                    </div>
+                )}
             </div>
 
             <div className="border-b border-dashed border-black mb-2">
-                <table className="w-full text-xs">
+                <table className="w-full text-[10px]">
                     <thead>
-                        <tr className="border-b border-dashed border-black">
-                            <th className="text-left font-normal py-1">Item</th>
-                            <th className="text-right font-normal py-1">Qty</th>
-                            <th className="text-right font-normal py-1">Total</th>
+                        <tr className="border-b border-dashed border-black font-bold">
+                            <th className="text-left py-1">Item</th>
+                            <th className="text-right py-1">Qty</th>
+                            <th className="text-right py-1">Total</th>
                         </tr>
                     </thead>
                     <tbody>
                         {transaction.items.map((item, idx) => (
-                            <tr key={idx}>
-                                <td className="py-1">
-                                    {item.name}
-                                    <div className="text-[10px] text-gray-600">@ {formatCurrency(item.price)}</div>
+                            <tr key={idx} className="align-top">
+                                <td className="py-1 pr-2">
+                                    <span className="block">{item.name}</span>
+                                    <span className="text-[8px] text-gray-500">@ {formatCurrency(item.price)}</span>
                                 </td>
                                 <td className="text-right py-1">{item.qty}</td>
                                 <td className="text-right py-1">{formatCurrency(item.subtotal)}</td>
@@ -73,7 +83,7 @@ export function Receipt({ storeInfo, transaction }: ReceiptProps) {
                 </table>
             </div>
 
-            <div className="space-y-1 text-xs mb-2">
+            <div className="space-y-1 text-[10px] mb-2">
                 <div className="flex justify-between">
                     <span>Subtotal</span>
                     <span>{formatCurrency(transaction.subtotal)}</span>
@@ -84,12 +94,12 @@ export function Receipt({ storeInfo, transaction }: ReceiptProps) {
                         <span>- {formatCurrency(transaction.discount)}</span>
                     </div>
                 )}
-                <div className="flex justify-between font-bold text-sm pt-1 border-t border-dashed border-black">
+                <div className="flex justify-between font-bold text-xs pt-1 border-t border-dashed border-black">
                     <span>TOTAL</span>
                     <span>{formatCurrency(transaction.total)}</span>
                 </div>
-                <div className="flex justify-between">
-                    <span>Bayar ({transaction.paymentMethod === 'qris' ? 'QRIS' : transaction.paymentMethod.toUpperCase()})</span>
+                <div className="flex justify-between mt-2">
+                    <span>Bayar ({transaction.paymentMethod === 'qris' ? 'QRIS' : 'TUNAI'})</span>
                     <span>{formatCurrency(transaction.paymentAmount)}</span>
                 </div>
                 <div className="flex justify-between">
@@ -99,15 +109,14 @@ export function Receipt({ storeInfo, transaction }: ReceiptProps) {
             </div>
 
             {transaction.member && (
-                <div className="text-[10px] border-t border-b border-dashed border-black py-1 mb-2">
-                    <p>Member: {transaction.member.name}</p>
-                    <p>Poin Baru: {transaction.member.points}</p>
+                <div className="text-[9px] border-t border-b border-dashed border-black py-1 mb-2 text-center">
+                    <p>Total Poin: {transaction.member.points}</p>
                 </div>
             )}
 
-            <div className="text-center text-[10px] mt-4">
+            <div className="text-center text-[9px] mt-4 leading-tight opacity-70">
                 <p>Terima Kasih Atas Kunjungan Anda</p>
-                <p>Barang yang sudah dibeli tidak dapat ditukar/dikembalikan</p>
+                <p>Barang/Jasa yang sudah dibeli tidak dapat ditukar</p>
             </div>
         </div>
     )

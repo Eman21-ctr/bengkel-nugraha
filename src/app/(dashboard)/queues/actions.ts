@@ -10,6 +10,8 @@ export type Queue = {
     queue_number: string
     status: QueueStatus
     member_id: string | null
+    notes: string | null
+    transaction_id: string | null
     created_at: string
     member?: {
         name: string
@@ -42,7 +44,7 @@ export async function getQueues() {
     return data
 }
 
-export async function createQueue(memberId?: string) {
+export async function createQueue(memberId?: string, notes?: string) {
     const supabase = await createClient()
 
     // 1. Get current count for today to generate queue number
@@ -63,6 +65,7 @@ export async function createQueue(memberId?: string) {
         .insert({
             queue_number: queueNumber,
             member_id: memberId || null,
+            notes: notes || null,
             status: 'Menunggu'
         })
         .select()
@@ -74,8 +77,62 @@ export async function createQueue(memberId?: string) {
     }
 
     revalidatePath('/queues')
+    revalidatePath('/transactions')
     revalidatePath('/')
     return { success: true, queue: data }
+}
+
+// Quick queue creation from cashier (can be empty)
+export async function createQuickQueue(memberId?: string, notes?: string) {
+    return createQueue(memberId, notes)
+}
+
+// Get active queues (not completed) for cashier sidebar
+export async function getActiveQueues() {
+    const supabase = await createClient()
+
+    const now = new Date()
+    const startOfDay = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }))
+    startOfDay.setHours(0, 0, 0, 0)
+
+    const { data, error } = await supabase
+        .from('queues')
+        .select(`
+            *,
+            member:members(name, vehicle_plate, vehicle_model)
+        `)
+        .gte('created_at', startOfDay.toISOString())
+        .neq('status', 'Selesai')
+        .order('created_at', { ascending: true })
+
+    if (error) {
+        console.error('Error fetching active queues:', error)
+        return []
+    }
+    return data
+}
+
+// Link queue to transaction after payment
+export async function linkQueueToTransaction(queueId: string, transactionId: string) {
+    const supabase = await createClient()
+
+    const { error } = await supabase
+        .from('queues')
+        .update({
+            status: 'Selesai',
+            transaction_id: transactionId
+        })
+        .eq('id', queueId)
+
+    if (error) {
+        console.error('Error linking queue to transaction:', error)
+        return { error: 'Gagal link antrean ke transaksi' }
+    }
+
+    revalidatePath('/queues')
+    revalidatePath('/transactions')
+    revalidatePath('/')
+    return { success: true }
 }
 
 export async function updateQueueStatus(id: string, status: QueueStatus) {

@@ -26,6 +26,7 @@ export type TransactionPayload = {
     total: number
     payment_method: 'cash' | 'qris'
     payment_amount: number
+    queue_id?: string
 }
 
 // Fetch products for POS
@@ -222,21 +223,18 @@ export async function processTransaction(payload: TransactionPayload) {
                     })
                     .eq('id', payload.member_id)
 
-                // 5. Auto-complete Active Queue for this member/plate
-                // We look for 'Menunggu' or 'Sedang Dilayani' for today
-                const now = new Date()
-                const today = now.toISOString().split('T')[0]
-                const startOfDay = `${today}T00:00:00+07:00`
-                const endOfDay = `${today}T23:59:59+07:00`
-
-                await supabase
-                    .from('queues')
-                    .update({ status: 'Selesai' })
-                    .eq('member_id', payload.member_id)
-                    .in('status', ['Menunggu', 'Sedang Dilayani', 'waiting', 'processing']) // matching both ID and EN versions if any
-                    .gte('created_at', startOfDay)
-                    .lte('created_at', endOfDay)
             }
+        }
+
+        // 5. Link Queue if provided
+        if (payload.queue_id) {
+            await supabase
+                .from('queues')
+                .update({
+                    status: 'Selesai',
+                    transaction_id: transaction.id
+                })
+                .eq('id', payload.queue_id)
         }
 
         revalidatePath('/transactions')

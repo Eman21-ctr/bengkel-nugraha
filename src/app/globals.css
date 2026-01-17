@@ -57,6 +57,12 @@ body {
     visibility: hidden;
   }
 
+  /* Global Print Isolation Logic */
+  body.is-printing-receipt #queue-ticket-print,
+  body.is-printing-ticket #receipt-print {
+    display: none !important;
+  }
+
   /* Receipt Logic (POS) */
   #receipt-print,
   #receipt-print * {
@@ -68,6 +74,30 @@ body {
     left: 0;
     top: 0;
     width: 80mm;
+    display: none;
+    /* Default hidden unless triggered by class */
+  }
+
+  body.is-printing-receipt #receipt-print {
+    display: block !important;
+  }
+
+  /* Queue Ticket Logic */
+  #queue-ticket-print,
+  #queue-ticket-print * {
+    visibility: visible;
+  }
+
+  #queue-ticket-print {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 80mm;
+    display: none;
+    /* Default hidden unless triggered by class */
+  }
+
+  body.is-printing-ticket #queue-ticket-print {
     display: block !important;
   }
 

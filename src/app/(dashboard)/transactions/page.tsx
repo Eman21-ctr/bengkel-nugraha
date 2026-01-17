@@ -21,6 +21,7 @@ import {
     searchMembers,
     getPointConfig,
     processTransaction,
+    getMemberById,
     type CartItem,
     type TransactionType,
     type TransactionPayload
@@ -34,11 +35,15 @@ import clsx from 'clsx'
 import { PrinterIcon, CameraIcon } from '@heroicons/react/24/outline'
 import { Html5QrcodeScanner } from 'html5-qrcode'
 import { getItemByBarcode } from './actions'
+import QueueSidebar from '@/components/QueueSidebar'
+import QueueDropdown from '@/components/QueueDropdown'
+import QuickQueueModal from '@/components/QuickQueueModal'
+import { type Queue, linkQueueToTransaction } from '../queues/actions'
 
 type Product = { id: string; name: string; category_id: string; price: number; cost_price: number; stock: number; min_stock: number; unit: string; barcode?: string | null }
 type ServicePrice = { vehicle_type: string; vehicle_size: string; price: number }
 type Service = { id: string; name: string; price: number; description?: string | null; barcode?: string | null; prices?: ServicePrice[] }
-type Member = { id: string; name: string; phone: string; vehicle_plate: string | null; points: number; vehicle_type: string; vehicle_size: string; visit_count: number }
+type Member = { id: string; name: string; phone: string; vehicle_plate: string | null; points: number; vehicle_type: string; vehicle_size: string; visit_count: number; member_code?: string }
 
 export default function TransactionsPage() {
     // Transaction type
@@ -76,6 +81,10 @@ export default function TransactionsPage() {
     const [itemSearch, setItemSearch] = useState('')
     const [showMobileItems, setShowMobileItems] = useState(false)
     const [isScanning, setIsScanning] = useState(false)
+
+    // Queue integration
+    const [selectedQueue, setSelectedQueue] = useState<Queue | null>(null)
+    const [showQueueModal, setShowQueueModal] = useState(false)
 
     // Load initial data
     useEffect(() => {
@@ -258,6 +267,37 @@ export default function TransactionsPage() {
         setEligibleReward(null)
     }
 
+    // Queue selection handler - auto load member from queue
+    const handleSelectQueue = async (queue: Queue | null) => {
+        setSelectedQueue(queue)
+        if (queue?.member_id) {
+            // Auto-fetch the full member data
+            const memberData = await getMemberById(queue.member_id)
+            if (memberData) {
+                // Map DB member to POS Member type
+                const member: Member = {
+                    id: memberData.id,
+                    name: memberData.name,
+                    phone: memberData.phone || '',
+                    vehicle_plate: memberData.vehicle_plate || '',
+                    points: memberData.points || 0,
+                    vehicle_type: memberData.vehicle_type as 'R2' | 'R4',
+                    vehicle_size: memberData.vehicle_size as 'Kecil' | 'Sedang' | 'Besar',
+                    member_code: memberData.member_code,
+                    visit_count: memberData.visit_count
+                }
+                selectMember(member)
+            }
+        } else if (!queue) {
+            clearMember()
+        }
+    }
+
+    // Handle queue created
+    const handleQueueCreated = () => {
+        // Refresh will happen via useEffect interval in components
+    }
+
     // Effect to update cart prices when member changes
     useEffect(() => {
         if (cart.length === 0) return
@@ -285,7 +325,12 @@ export default function TransactionsPage() {
 
     // Handle print
     const handlePrint = () => {
+        document.body.classList.add('is-printing-receipt')
         window.print()
+        // Penundaan kecil untuk memastikan window.print() selesai memicu dialog sebelum class dihapus
+        setTimeout(() => {
+            document.body.classList.remove('is-printing-receipt')
+        }, 500)
     }
 
     // Process payment
@@ -312,7 +357,8 @@ export default function TransactionsPage() {
             points_used: pointsToUse,
             total: finalTotal,
             payment_method: paymentMethod,
-            payment_amount: paymentAmount
+            payment_amount: paymentAmount,
+            queue_id: selectedQueue?.id
         }
 
         const result = await processTransaction(payload)
@@ -332,10 +378,11 @@ export default function TransactionsPage() {
     const resetPOS = () => {
         setCart([])
         setSelectedMember(null)
+        setSelectedQueue(null)
         setPointsToUse(0)
         setPaymentAmount(0)
         setShowSuccess(false)
-        refreshData()
+        setInvoiceNumber('')
     }
 
     const filteredServices = services.filter(s =>
@@ -347,420 +394,496 @@ export default function TransactionsPage() {
     )
 
     return (
-        <div className="flex flex-col lg:flex-row gap-6 lg:h-[calc(100vh-8rem)] print:hidden">
-            {/* Left Panel - Product/Service Selection */}
-            <div className="flex-1 flex flex-col bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden min-h-0">
-                {/* Header with Member Selection (Top Priority) */}
-                <div className="p-4 border-b border-gray-100 flex flex-col gap-3 bg-white sticky top-0 z-20">
-                    <div className="flex items-center justify-between lg:mb-0">
-                        <h1 className="text-xl font-black text-primary italic uppercase tracking-tighter">KASIR <span className="text-gray-300">NUGRAHA</span></h1>
-                        <button
-                            onClick={() => setShowMobileItems(!showMobileItems)}
-                            className="lg:hidden text-primary text-[10px] font-black uppercase tracking-widest flex items-center gap-1 cursor-pointer bg-blue-50 px-3 py-2 rounded-xl"
-                        >
-                            {showMobileItems ? (
-                                <>TUTUP KATALOG <MinusIcon className="w-4 h-4" /></>
-                            ) : (
-                                <>LIHAT KATALOG <PlusIcon className="w-4 h-4" /></>
-                            )}
-                        </button>
+        <>
+            {/* Quick Queue Modal */}
+            <QuickQueueModal
+                isOpen={showQueueModal}
+                onClose={() => setShowQueueModal(false)}
+                onSuccess={handleQueueCreated}
+            />
+
+            <div className="flex flex-col lg:flex-row gap-6 lg:h-[calc(100vh-8rem)]">
+                <div className="flex flex-col lg:flex-row gap-6 lg:h-[calc(100vh-8rem)] flex-1 print:hidden">
+                    {/* Queue Sidebar - Desktop Only */}
+                    <div className="hidden lg:block w-72 flex-shrink-0 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                        <QueueSidebar
+                            onSelectQueue={handleSelectQueue}
+                            onCreateQueue={() => setShowQueueModal(true)}
+                            selectedQueueId={selectedQueue?.id}
+                        />
                     </div>
 
-                    {/* Member Selection - The Core Flow */}
-                    <div className={clsx(
-                        "p-2.5 rounded-2xl transition-all border-2",
-                        selectedMember ? "bg-green-50/50 border-green-200" : "bg-blue-50 border-primary shadow-lg shadow-blue-100"
-                    )}>
-                        <div className="flex flex-col md:flex-row md:items-center gap-3">
-                            <div className="flex-1">
-                                <label className="text-[8px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1.5 block ml-1">IDENTITAS PELANGGAN (WAJIB BENGKEL)</label>
-                                {selectedMember ? (
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-12 h-12 rounded-2xl bg-white shadow-sm flex items-center justify-center border border-green-100">
-                                                <UserIcon className="w-6 h-6 text-green-600" />
-                                            </div>
-                                            <div>
-                                                <p className="font-black text-gray-900 leading-tight">{selectedMember?.name}</p>
-                                                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-1">
-                                                    {selectedMember?.vehicle_plate || '-'} • {selectedMember?.vehicle_type} {selectedMember?.vehicle_size}
-                                                </p>
-                                            </div>
+                    {/* Left Panel - Product/Service Selection */}
+                    <div className="flex-1 flex flex-col bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden min-h-0">
+                        {/* Header with Member Selection (Top Priority) */}
+                        <div className="p-4 border-b border-gray-100 flex flex-col gap-3 bg-white sticky top-0 z-20">
+                            {/* Mobile Queue Dropdown */}
+                            <div className="lg:hidden">
+                                <QueueDropdown
+                                    onSelectQueue={handleSelectQueue}
+                                    onCreateQueue={() => setShowQueueModal(true)}
+                                    selectedQueueId={selectedQueue?.id}
+                                />
+                            </div>
+
+                            {/* Queue Info Banner */}
+                            {selectedQueue && (
+                                <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-3 flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-2xl font-black text-primary">{selectedQueue.queue_number}</span>
+                                        <div>
+                                            <p className="text-xs font-bold text-blue-700">Antrian Aktif</p>
+                                            {selectedQueue.notes && (
+                                                <p className="text-xs text-blue-600">{selectedQueue.notes}</p>
+                                            )}
                                         </div>
-                                        <button onClick={clearMember} className="p-2 hover:bg-red-50 text-red-400 rounded-xl transition-colors cursor-pointer">
-                                            <XMarkIcon className="w-6 h-6" />
-                                        </button>
                                     </div>
-                                ) : (
-                                    <div className="relative">
-                                        <MagnifyingGlassIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-primary" />
-                                        <input
-                                            type="text"
-                                            placeholder="Cari Nama / No HP / Plat Nomor..."
-                                            value={memberSearch}
-                                            onChange={(e) => setMemberSearch(e.target.value)}
-                                            className="w-full pl-12 pr-4 py-4 bg-white border-2 border-transparent rounded-2xl text-sm font-bold text-gray-900 focus:border-primary focus:ring-0 transition-all placeholder:text-gray-300 shadow-sm"
-                                        />
-                                        {memberResults.length > 0 && (
-                                            <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-100 rounded-2xl shadow-2xl z-[100] max-h-64 overflow-y-auto">
-                                                {memberResults.map(m => (
-                                                    <button
-                                                        key={m.id}
-                                                        onClick={() => selectMember(m)}
-                                                        className="w-full p-4 text-left hover:bg-blue-50 border-b border-gray-50 last:border-0 transition-colors flex items-center gap-4 group cursor-pointer"
-                                                    >
-                                                        <div className="w-10 h-10 rounded-xl bg-gray-100 group-hover:bg-white flex items-center justify-center text-lg transition-colors">
-                                                            {m.vehicle_type === 'R2' ? '🏍️' : '🚗'}
-                                                        </div>
-                                                        <div>
-                                                            <p className="font-black text-gray-900 group-hover:text-primary transition-colors">{m.name}</p>
-                                                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{m.vehicle_plate} • {m.phone}</p>
-                                                        </div>
-                                                    </button>
-                                                ))}
+                                    <button
+                                        onClick={() => handleSelectQueue(null)}
+                                        className="text-xs font-bold text-blue-600 hover:text-blue-800"
+                                    >
+                                        Lepas
+                                    </button>
+                                </div>
+                            )}
+
+                            <div className="flex items-center justify-between lg:mb-0">
+                                <h1 className="text-xl font-black text-primary italic uppercase tracking-tighter">KASIR <span className="text-gray-300">NUGRAHA</span></h1>
+                                <button
+                                    onClick={() => setShowMobileItems(!showMobileItems)}
+                                    className="lg:hidden text-primary text-[10px] font-black uppercase tracking-widest flex items-center gap-1 cursor-pointer bg-blue-50 px-3 py-2 rounded-xl"
+                                >
+                                    {showMobileItems ? (
+                                        <>TUTUP KATALOG <MinusIcon className="w-4 h-4" /></>
+                                    ) : (
+                                        <>LIHAT KATALOG <PlusIcon className="w-4 h-4" /></>
+                                    )}
+                                </button>
+                            </div>
+
+                            {/* Member Selection - The Core Flow */}
+                            <div className={clsx(
+                                "p-2.5 rounded-2xl transition-all border-2",
+                                selectedMember ? "bg-green-50/50 border-green-200" : "bg-blue-50 border-primary shadow-lg shadow-blue-100"
+                            )}>
+                                <div className="flex flex-col md:flex-row md:items-center gap-3">
+                                    <div className="flex-1">
+                                        <label className="text-[8px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1.5 block ml-1">IDENTITAS PELANGGAN (WAJIB BENGKEL)</label>
+                                        {selectedMember ? (
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-12 h-12 rounded-2xl bg-white shadow-sm flex items-center justify-center border border-green-100">
+                                                        <UserIcon className="w-6 h-6 text-green-600" />
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-black text-gray-900 leading-tight">{selectedMember?.name}</p>
+                                                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-1">
+                                                            {selectedMember?.vehicle_plate || '-'} • {selectedMember?.vehicle_type} {selectedMember?.vehicle_size}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <button onClick={clearMember} className="p-2 hover:bg-red-50 text-red-400 rounded-xl transition-colors cursor-pointer">
+                                                    <XMarkIcon className="w-6 h-6" />
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <div className="relative">
+                                                <MagnifyingGlassIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-primary" />
+                                                <input
+                                                    type="text"
+                                                    placeholder="Cari Nama / No HP / Plat Nomor..."
+                                                    value={memberSearch}
+                                                    onChange={(e) => setMemberSearch(e.target.value)}
+                                                    className="w-full pl-12 pr-4 py-4 bg-white border-2 border-transparent rounded-2xl text-sm font-bold text-gray-900 focus:border-primary focus:ring-0 transition-all placeholder:text-gray-300 shadow-sm"
+                                                />
+                                                {memberResults.length > 0 && (
+                                                    <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-100 rounded-2xl shadow-2xl z-[100] max-h-64 overflow-y-auto">
+                                                        {memberResults.map(m => (
+                                                            <button
+                                                                key={m.id}
+                                                                onClick={() => selectMember(m)}
+                                                                className="w-full p-4 text-left hover:bg-blue-50 border-b border-gray-50 last:border-0 transition-colors flex items-center gap-4 group cursor-pointer"
+                                                            >
+                                                                <div className="w-10 h-10 rounded-xl bg-gray-100 group-hover:bg-white flex items-center justify-center text-lg transition-colors">
+                                                                    {m.vehicle_type === 'R2' ? '🏍️' : '🚗'}
+                                                                </div>
+                                                                <div>
+                                                                    <p className="font-black text-gray-900 group-hover:text-primary transition-colors">{m.name}</p>
+                                                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{m.vehicle_plate} • {m.phone}</p>
+                                                                </div>
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
+                                    </div>
+
+                                    {selectedMember && (
+                                        <div className="flex flex-col gap-1 pr-2">
+                                            <div className="flex items-center justify-between md:justify-end gap-4">
+                                                <div className="text-right">
+                                                    <p className="text-[7px] font-black text-green-600 uppercase tracking-widest leading-none mb-0.5">POIN</p>
+                                                    <p className="text-sm font-black text-gray-900 leading-none">{selectedMember?.points}</p>
+                                                </div>
+                                                <div className="text-right border-l border-gray-100 pl-4">
+                                                    <p className="text-[7px] font-black text-blue-600 uppercase tracking-widest leading-none mb-0.5">VISIT</p>
+                                                    <p className="text-sm font-black text-gray-900 leading-none">{selectedMember?.visit_count || 0}</p>
+                                                </div>
+                                                {eligibleReward && (
+                                                    <div className="bg-orange-500 text-white px-3 py-1.5 rounded-xl shadow-lg shadow-orange-200 flex items-center gap-2 animate-bounce cursor-default">
+                                                        <span className="text-sm">🎁</span>
+                                                        <div className="leading-none">
+                                                            <p className="text-[7px] font-black uppercase tracking-widest">KLAIM!</p>
+                                                            <p className="text-[10px] font-black whitespace-nowrap">{eligibleReward?.reward_name}</p>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Filter & Search Bar - ALWAYS VISIBLE */}
+                            <div className="flex flex-col gap-3">
+                                <div className="flex gap-2 p-1 bg-gray-100 rounded-xl">
+                                    <button
+                                        onClick={() => setTxType('bengkel')}
+                                        className={clsx(
+                                            'flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer',
+                                            txType === 'bengkel' ? 'bg-primary text-white shadow-md' : 'text-gray-500 hover:bg-gray-200'
+                                        )}
+                                    >
+                                        <WrenchScrewdriverIcon className="w-4 h-4" /> Bengkel
+                                    </button>
+                                    <button
+                                        onClick={() => setTxType('kafe')}
+                                        className={clsx(
+                                            'flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer',
+                                            txType === 'kafe' ? 'bg-secondary text-white shadow-md' : 'text-gray-500 hover:bg-gray-200'
+                                        )}
+                                    >
+                                        <ShoppingCartIcon className="w-4 h-4" /> Kafe
+                                    </button>
+                                </div>
+                                <div className="flex gap-2">
+                                    <div className="relative flex-1">
+                                        <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                        <input
+                                            type="text"
+                                            placeholder={`Cari ${txType === 'bengkel' ? 'jasa / sparepart' : 'makanan / minuman'}...`}
+                                            value={itemSearch}
+                                            onChange={(e) => {
+                                                setItemSearch(e.target.value);
+                                                if (e.target.value.length > 0) setShowMobileItems(true);
+                                            }}
+                                            onFocus={() => setShowMobileItems(true)}
+                                            className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold text-gray-900 focus:ring-primary focus:border-primary transition-all"
+                                        />
+                                    </div>
+                                    <button
+                                        onClick={() => setIsScanning(!isScanning)}
+                                        className={clsx(
+                                            "px-4 rounded-xl border-2 transition-all cursor-pointer",
+                                            isScanning ? "bg-red-50 border-red-200 text-red-600" : "bg-white border-gray-100 text-primary hover:border-primary"
+                                        )}
+                                    >
+                                        <CameraIcon className="w-5 h-5" />
+                                    </button>
+                                </div>
+                                {isScanning && (
+                                    <div className="border-2 border-dashed border-gray-200 rounded-2xl p-2 bg-gray-50">
+                                        <div id="reader" className="w-full overflow-hidden rounded-xl"></div>
                                     </div>
                                 )}
                             </div>
+                        </div>
 
-                            {selectedMember && (
-                                <div className="flex flex-col gap-1 pr-2">
-                                    <div className="flex items-center justify-between md:justify-end gap-4">
-                                        <div className="text-right">
-                                            <p className="text-[7px] font-black text-green-600 uppercase tracking-widest leading-none mb-0.5">POIN</p>
-                                            <p className="text-sm font-black text-gray-900 leading-none">{selectedMember?.points}</p>
-                                        </div>
-                                        <div className="text-right border-l border-gray-100 pl-4">
-                                            <p className="text-[7px] font-black text-blue-600 uppercase tracking-widest leading-none mb-0.5">VISIT</p>
-                                            <p className="text-sm font-black text-gray-900 leading-none">{selectedMember?.visit_count || 0}</p>
-                                        </div>
-                                        {eligibleReward && (
-                                            <div className="bg-orange-500 text-white px-3 py-1.5 rounded-xl shadow-lg shadow-orange-200 flex items-center gap-2 animate-bounce cursor-default">
-                                                <span className="text-sm">🎁</span>
-                                                <div className="leading-none">
-                                                    <p className="text-[7px] font-black uppercase tracking-widest">KLAIM!</p>
-                                                    <p className="text-[10px] font-black whitespace-nowrap">{eligibleReward?.reward_name}</p>
+                        {/* Items Grid */}
+                        <div className={clsx(
+                            "flex-1 overflow-y-auto p-4 lg:block",
+                            !showMobileItems && "hidden"
+                        )}>
+                            {txType === 'bengkel' && (
+                                <>
+                                    <div className="flex items-center gap-2 mb-4">
+                                        <div className="h-1.5 w-8 bg-orange-400 rounded-full" />
+                                        <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Jasa Servis Professional</h3>
+                                    </div>
+                                    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 mb-8">
+                                        {filteredServices.map(service => {
+                                            const customPriceObj = selectedMember ? service.prices?.find(p =>
+                                                p.vehicle_type === selectedMember.vehicle_type &&
+                                                p.vehicle_size === selectedMember.vehicle_size
+                                            ) : null;
+                                            const displayPrice = customPriceObj ? customPriceObj.price : service.price;
+
+                                            return (
+                                                <div key={service.id} className="relative group/item">
+                                                    <button
+                                                        onClick={() => addToCart(service, 'service')}
+                                                        className="w-full p-4 bg-orange-50/50 border border-orange-100 rounded-2xl text-left hover:bg-orange-50 hover:border-orange-300 transition-all cursor-pointer group relative overflow-hidden h-full flex flex-col justify-between"
+                                                    >
+                                                        <div className="relative z-10">
+                                                            <p className="font-black text-gray-900 text-xs leading-tight mb-2 uppercase tracking-wide">{service.name}</p>
+                                                            <div className="mt-auto">
+                                                                <p className="text-primary font-black text-base">{formatCurrency(displayPrice)}</p>
+                                                                {customPriceObj && (
+                                                                    <span className="inline-block mt-1 bg-primary text-white text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-tighter">Harga {selectedMember?.vehicle_type}</span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                        <div className="absolute -bottom-4 -right-4 w-12 h-12 bg-orange-200 opacity-10 rounded-full group-hover:scale-150 transition-transform" />
+                                                    </button>
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); setEditingService(service as any); }}
+                                                        className="absolute top-2 right-2 p-1.5 bg-white shadow-sm border border-gray-100 rounded-lg text-gray-300 hover:text-primary transition-opacity opacity-0 group-hover/item:opacity-100 cursor-pointer"
+                                                    >
+                                                        <PencilIcon className="w-3 h-3" />
+                                                    </button>
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                </>
+                            )}
+
+                            <div className="flex items-center gap-2 mb-4">
+                                <div className="h-1.5 w-8 bg-blue-400 rounded-full" />
+                                <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">{txType === 'bengkel' ? 'Suku Cadang & Oli' : 'Menu Kafe'}</h3>
+                            </div>
+                            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+                                {filteredProducts.map(product => (
+                                    <div key={product.id} className="relative group/item">
+                                        <button
+                                            onClick={() => addToCart(product, 'product')}
+                                            disabled={product.stock <= 0}
+                                            className={clsx(
+                                                "w-full p-4 border-2 rounded-2xl text-left transition-all cursor-pointer group relative overflow-hidden h-full flex flex-col justify-between",
+                                                product.stock > 0
+                                                    ? "bg-blue-50/30 border-blue-50 hover:bg-white hover:border-primary hover:shadow-xl hover:shadow-blue-50"
+                                                    : "bg-gray-50 border-gray-100 opacity-40 cursor-not-allowed"
+                                            )}
+                                        >
+                                            <div className="relative z-10">
+                                                <p className="font-black text-gray-900 text-xs leading-tight mb-2 uppercase tracking-wide truncate group-hover:whitespace-normal">{product.name}</p>
+                                                <p className="text-primary font-black text-base">{formatCurrency(product.price)}</p>
+                                                <div className="flex justify-between items-center mt-3">
+                                                    <span className={clsx(
+                                                        "text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-[0.1em]",
+                                                        product.stock <= 5 ? "bg-red-500 text-white" : "bg-gray-800 text-white"
+                                                    )}>Stok: {product.stock}</span>
                                                 </div>
                                             </div>
-                                        )}
+                                        </button>
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); setEditingProduct(product); }}
+                                            className="absolute top-2 right-2 p-1.5 bg-white shadow-sm border border-gray-100 rounded-lg text-gray-300 hover:text-primary transition-opacity opacity-0 group-hover/item:opacity-100 cursor-pointer"
+                                        >
+                                            <PencilIcon className="w-3 h-3" />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Right Panel - Cart & Checkout */}
+                    <div className="w-full lg:w-96 flex flex-col bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex-shrink-0">
+                        <div className="p-4 border-b border-gray-100 bg-gray-50/50">
+                            <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest">Keranjang Belanja</h3>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                            {cart.length === 0 ? (
+                                <div className="h-full flex flex-col items-center justify-center text-gray-300 py-12">
+                                    <ShoppingCartIcon className="w-16 h-16 opacity-10 mb-2" />
+                                    <p className="text-[10px] font-black uppercase tracking-widest">Belum Ada Item</p>
+                                </div>
+                            ) : (
+                                <ul className="space-y-2">
+                                    {cart.map(item => (
+                                        <li key={`${item.type}-${item.id}`} className="flex items-center gap-2 p-2 bg-gray-50/50 border border-gray-100 rounded-xl group transition-all hover:bg-white hover:shadow-md hover:shadow-gray-100">
+                                            <div className="flex-1 min-w-0">
+                                                <p className="font-black text-gray-900 text-[10px] uppercase tracking-wide truncate leading-tight">{item.name}</p>
+                                                <p className="text-[9px] font-bold text-primary mt-0.5">{formatCurrency(item.price)}</p>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <input
+                                                    type="number"
+                                                    value={item.qty}
+                                                    onChange={(e) => {
+                                                        const newQty = parseInt(e.target.value);
+                                                        if (!isNaN(newQty) && newQty >= 0) {
+                                                            const diff = newQty - item.qty;
+                                                            updateQty(item.id, item.type, diff);
+                                                        }
+                                                    }}
+                                                    className="w-12 py-1 px-1 bg-white border border-gray-200 rounded-lg text-center text-xs font-black text-gray-900 focus:ring-primary focus:border-primary outline-none"
+                                                />
+                                                <button
+                                                    onClick={() => removeFromCart(item.id, item.type)}
+                                                    className="p-1 text-red-200 group-hover:text-red-500 transition-colors cursor-pointer"
+                                                >
+                                                    <TrashIcon className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                        </div>
+
+                        {/* Checkout Summary */}
+                        <div className="p-4 bg-white border-t border-gray-100 space-y-4 shadow-[0_-10px_20px_rgba(0,0,0,0.02)]">
+                            {/* Points Redemption Slider-style Toggle if Member exists */}
+                            {selectedMember && selectedMember.points > 0 && (
+                                <div className="flex flex-col gap-2 p-3 bg-blue-50/50 rounded-2xl border border-blue-100">
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em]">Pakai Poin?</label>
+                                        <span className="text-[9px] font-black text-primary">MAX: {selectedMember?.points}</span>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            max={selectedMember?.points}
+                                            value={pointsToUse}
+                                            onChange={(e) => setPointsToUse(Math.min(Number(e.target.value), selectedMember?.points || 0))}
+                                            className="flex-1 bg-transparent border-b-2 border-gray-200 focus:border-primary outline-none py-1 text-sm font-black text-gray-900 text-right"
+                                        />
+                                        <span className="text-[10px] font-black text-gray-300">PTS</span>
                                     </div>
                                 </div>
                             )}
-                        </div>
-                    </div>
 
-                    {/* Filter & Search Bar - ALWAYS VISIBLE */}
-                    <div className="flex flex-col gap-3">
-                        <div className="flex gap-2 p-1 bg-gray-100 rounded-xl">
-                            <button
-                                onClick={() => setTxType('bengkel')}
-                                className={clsx(
-                                    'flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer',
-                                    txType === 'bengkel' ? 'bg-primary text-white shadow-md' : 'text-gray-500 hover:bg-gray-200'
+                            <div className="space-y-1.5 pt-2">
+                                <div className="flex justify-between text-xs font-bold text-gray-400">
+                                    <span>SUBTOTAL</span>
+                                    <span>{formatCurrency(cleanSubtotal)}</span>
+                                </div>
+                                {pointDiscount > 0 && (
+                                    <div className="flex justify-between text-xs font-bold text-green-600">
+                                        <span className="flex items-center gap-1.5"><CheckCircleIcon className="w-4 h-4" /> DISKON POIN</span>
+                                        <span>- {formatCurrency(pointDiscount)}</span>
+                                    </div>
                                 )}
-                            >
-                                <WrenchScrewdriverIcon className="w-4 h-4" /> Bengkel
-                            </button>
-                            <button
-                                onClick={() => setTxType('kafe')}
-                                className={clsx(
-                                    'flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer',
-                                    txType === 'kafe' ? 'bg-secondary text-white shadow-md' : 'text-gray-500 hover:bg-gray-200'
-                                )}
-                            >
-                                <ShoppingCartIcon className="w-4 h-4" /> Kafe
-                            </button>
-                        </div>
-                        <div className="flex gap-2">
-                            <div className="relative flex-1">
-                                <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                <input
-                                    type="text"
-                                    placeholder={`Cari ${txType === 'bengkel' ? 'jasa / sparepart' : 'makanan / minuman'}...`}
-                                    value={itemSearch}
-                                    onChange={(e) => {
-                                        setItemSearch(e.target.value);
-                                        if (e.target.value.length > 0) setShowMobileItems(true);
-                                    }}
-                                    onFocus={() => setShowMobileItems(true)}
-                                    className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold text-gray-900 focus:ring-primary focus:border-primary transition-all"
-                                />
+                                <div className="flex justify-between text-2xl font-black text-gray-900 border-t border-gray-100 pt-3 mt-2">
+                                    <span className="tracking-tighter italic">TOTAL</span>
+                                    <span className="text-primary">{formatCurrency(finalTotal)}</span>
+                                </div>
                             </div>
-                            <button
-                                onClick={() => setIsScanning(!isScanning)}
-                                className={clsx(
-                                    "px-4 rounded-xl border-2 transition-all cursor-pointer",
-                                    isScanning ? "bg-red-50 border-red-200 text-red-600" : "bg-white border-gray-100 text-primary hover:border-primary"
-                                )}
-                            >
-                                <CameraIcon className="w-5 h-5" />
-                            </button>
-                        </div>
-                        {isScanning && (
-                            <div className="border-2 border-dashed border-gray-200 rounded-2xl p-2 bg-gray-50">
-                                <div id="reader" className="w-full overflow-hidden rounded-xl"></div>
-                            </div>
-                        )}
-                    </div>
-                </div>
 
-                {/* Items Grid */}
-                <div className={clsx(
-                    "flex-1 overflow-y-auto p-4 lg:block",
-                    !showMobileItems && "hidden"
-                )}>
-                    {txType === 'bengkel' && (
-                        <>
-                            <div className="flex items-center gap-2 mb-4">
-                                <div className="h-1.5 w-8 bg-orange-400 rounded-full" />
-                                <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Jasa Servis Professional</h3>
-                            </div>
-                            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 mb-8">
-                                {filteredServices.map(service => {
-                                    const customPriceObj = selectedMember ? service.prices?.find(p =>
-                                        p.vehicle_type === selectedMember.vehicle_type &&
-                                        p.vehicle_size === selectedMember.vehicle_size
-                                    ) : null;
-                                    const displayPrice = customPriceObj ? customPriceObj.price : service.price;
-
-                                    return (
-                                        <div key={service.id} className="relative group/item">
-                                            <button
-                                                onClick={() => addToCart(service, 'service')}
-                                                className="w-full p-4 bg-orange-50/50 border border-orange-100 rounded-2xl text-left hover:bg-orange-50 hover:border-orange-300 transition-all cursor-pointer group relative overflow-hidden h-full flex flex-col justify-between"
-                                            >
-                                                <div className="relative z-10">
-                                                    <p className="font-black text-gray-900 text-xs leading-tight mb-2 uppercase tracking-wide">{service.name}</p>
-                                                    <div className="mt-auto">
-                                                        <p className="text-primary font-black text-base">{formatCurrency(displayPrice)}</p>
-                                                        {customPriceObj && (
-                                                            <span className="inline-block mt-1 bg-primary text-white text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-tighter">Harga {selectedMember?.vehicle_type}</span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                                <div className="absolute -bottom-4 -right-4 w-12 h-12 bg-orange-200 opacity-10 rounded-full group-hover:scale-150 transition-transform" />
-                                            </button>
-                                            <button
-                                                onClick={(e) => { e.stopPropagation(); setEditingService(service as any); }}
-                                                className="absolute top-2 right-2 p-1.5 bg-white shadow-sm border border-gray-100 rounded-lg text-gray-300 hover:text-primary transition-opacity opacity-0 group-hover/item:opacity-100 cursor-pointer"
-                                            >
-                                                <PencilIcon className="w-3 h-3" />
-                                            </button>
-                                        </div>
-                                    )
-                                })}
-                            </div>
-                        </>
-                    )}
-
-                    <div className="flex items-center gap-2 mb-4">
-                        <div className="h-1.5 w-8 bg-blue-400 rounded-full" />
-                        <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">{txType === 'bengkel' ? 'Suku Cadang & Oli' : 'Menu Kafe'}</h3>
-                    </div>
-                    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-                        {filteredProducts.map(product => (
-                            <div key={product.id} className="relative group/item">
+                            <div className="flex gap-2">
                                 <button
-                                    onClick={() => addToCart(product, 'product')}
-                                    disabled={product.stock <= 0}
+                                    onClick={() => setPaymentMethod('cash')}
                                     className={clsx(
-                                        "w-full p-4 border-2 rounded-2xl text-left transition-all cursor-pointer group relative overflow-hidden h-full flex flex-col justify-between",
-                                        product.stock > 0
-                                            ? "bg-blue-50/30 border-blue-50 hover:bg-white hover:border-primary hover:shadow-xl hover:shadow-blue-50"
-                                            : "bg-gray-50 border-gray-100 opacity-40 cursor-not-allowed"
+                                        "flex-1 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all border-2 cursor-pointer flex items-center justify-center gap-2",
+                                        paymentMethod === 'cash' ? "bg-primary text-white border-primary shadow-lg shadow-blue-100" : "bg-white text-gray-400 border-gray-100 hover:border-blue-100 hover:text-primary"
                                     )}
                                 >
-                                    <div className="relative z-10">
-                                        <p className="font-black text-gray-900 text-xs leading-tight mb-2 uppercase tracking-wide truncate group-hover:whitespace-normal">{product.name}</p>
-                                        <p className="text-primary font-black text-base">{formatCurrency(product.price)}</p>
-                                        <div className="flex justify-between items-center mt-3">
-                                            <span className={clsx(
-                                                "text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-[0.1em]",
-                                                product.stock <= 5 ? "bg-red-500 text-white" : "bg-gray-800 text-white"
-                                            )}>Stok: {product.stock}</span>
-                                        </div>
-                                    </div>
+                                    <BanknotesIcon className="w-4 h-4" /> TUNAI
                                 </button>
                                 <button
-                                    onClick={(e) => { e.stopPropagation(); setEditingProduct(product); }}
-                                    className="absolute top-2 right-2 p-1.5 bg-white shadow-sm border border-gray-100 rounded-lg text-gray-300 hover:text-primary transition-opacity opacity-0 group-hover/item:opacity-100 cursor-pointer"
+                                    onClick={() => setPaymentMethod('qris')}
+                                    className={clsx(
+                                        "flex-1 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all border-2 cursor-pointer flex items-center justify-center gap-2",
+                                        paymentMethod === 'qris' ? "bg-primary text-white border-primary shadow-lg shadow-blue-100" : "bg-white text-gray-400 border-gray-100 hover:border-blue-100 hover:text-primary"
+                                    )}
                                 >
-                                    <PencilIcon className="w-3 h-3" />
+                                    <QrCodeIcon className="w-4 h-4" /> QRIS
                                 </button>
                             </div>
-                        ))}
-                    </div>
-                </div>
-            </div>
 
-            {/* Right Panel - Cart & Checkout */}
-            <div className="w-full lg:w-96 flex flex-col bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex-shrink-0">
-                <div className="p-4 border-b border-gray-100 bg-gray-50/50">
-                    <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest">Keranjang Belanja</h3>
-                </div>
-
-                <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                    {cart.length === 0 ? (
-                        <div className="h-full flex flex-col items-center justify-center text-gray-300 py-12">
-                            <ShoppingCartIcon className="w-16 h-16 opacity-10 mb-2" />
-                            <p className="text-[10px] font-black uppercase tracking-widest">Belum Ada Item</p>
-                        </div>
-                    ) : (
-                        <ul className="space-y-2">
-                            {cart.map(item => (
-                                <li key={`${item.type}-${item.id}`} className="flex items-center gap-2 p-2 bg-gray-50/50 border border-gray-100 rounded-xl group transition-all hover:bg-white hover:shadow-md hover:shadow-gray-100">
-                                    <div className="flex-1 min-w-0">
-                                        <p className="font-black text-gray-900 text-[10px] uppercase tracking-wide truncate leading-tight">{item.name}</p>
-                                        <p className="text-[9px] font-bold text-primary mt-0.5">{formatCurrency(item.price)}</p>
+                            <div className="space-y-3">
+                                <div>
+                                    <div className="flex justify-between mb-1">
+                                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest">NOMINAL BAYAR</label>
+                                        {cleanChange > 0 && <span className="text-[9px] font-black text-green-600">KEMBALI: {formatCurrency(cleanChange)}</span>}
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        <input
-                                            type="number"
-                                            value={item.qty}
-                                            onChange={(e) => {
-                                                const newQty = parseInt(e.target.value);
-                                                if (!isNaN(newQty) && newQty >= 0) {
-                                                    const diff = newQty - item.qty;
-                                                    updateQty(item.id, item.type, diff);
-                                                }
-                                            }}
-                                            className="w-12 py-1 px-1 bg-white border border-gray-200 rounded-lg text-center text-xs font-black text-gray-900 focus:ring-primary focus:border-primary outline-none"
-                                        />
-                                        <button
-                                            onClick={() => removeFromCart(item.id, item.type)}
-                                            className="p-1 text-red-200 group-hover:text-red-500 transition-colors cursor-pointer"
-                                        >
-                                            <TrashIcon className="w-4 h-4" />
-                                        </button>
-                                    </div>
-                                </li>
-                            ))}
-                        </ul>
-                    )}
-                </div>
+                                    <input
+                                        type="number"
+                                        value={paymentAmount || ''}
+                                        onChange={(e) => setPaymentAmount(Number(e.target.value))}
+                                        placeholder="0"
+                                        className="w-full bg-gray-50 border-2 border-gray-100 rounded-2xl py-3 px-4 text-xl font-black text-right text-gray-900 focus:border-primary focus:ring-0 transition-all placeholder:text-gray-200"
+                                    />
+                                </div>
 
-                {/* Checkout Summary */}
-                <div className="p-4 bg-white border-t border-gray-100 space-y-4 shadow-[0_-10px_20px_rgba(0,0,0,0.02)]">
-                    {/* Points Redemption Slider-style Toggle if Member exists */}
-                    {selectedMember && selectedMember.points > 0 && (
-                        <div className="flex flex-col gap-2 p-3 bg-blue-50/50 rounded-2xl border border-blue-100">
-                            <div className="flex items-center justify-between">
-                                <label className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em]">Pakai Poin?</label>
-                                <span className="text-[9px] font-black text-primary">MAX: {selectedMember?.points}</span>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <input
-                                    type="number"
-                                    min="0"
-                                    max={selectedMember?.points}
-                                    value={pointsToUse}
-                                    onChange={(e) => setPointsToUse(Math.min(Number(e.target.value), selectedMember?.points || 0))}
-                                    className="flex-1 bg-transparent border-b-2 border-gray-200 focus:border-primary outline-none py-1 text-sm font-black text-gray-900 text-right"
-                                />
-                                <span className="text-[10px] font-black text-gray-300">PTS</span>
+                                <button
+                                    onClick={handlePayment}
+                                    disabled={cart.length === 0 || Number(paymentAmount) < finalTotal || isProcessing}
+                                    className="w-full py-4 bg-primary text-white font-black text-sm uppercase tracking-[0.2em] rounded-2xl hover:bg-gray-900 transition-all disabled:opacity-30 disabled:grayscale cursor-pointer shadow-xl shadow-blue-100"
+                                >
+                                    {isProcessing ? 'MEMPROSES...' : 'PROSES PEMBAYARAN'}
+                                </button>
                             </div>
                         </div>
-                    )}
-
-                    <div className="space-y-1.5 pt-2">
-                        <div className="flex justify-between text-xs font-bold text-gray-400">
-                            <span>SUBTOTAL</span>
-                            <span>{formatCurrency(cleanSubtotal)}</span>
-                        </div>
-                        {pointDiscount > 0 && (
-                            <div className="flex justify-between text-xs font-bold text-green-600">
-                                <span className="flex items-center gap-1.5"><CheckCircleIcon className="w-4 h-4" /> DISKON POIN</span>
-                                <span>- {formatCurrency(pointDiscount)}</span>
-                            </div>
-                        )}
-                        <div className="flex justify-between text-2xl font-black text-gray-900 border-t border-gray-100 pt-3 mt-2">
-                            <span className="tracking-tighter italic">TOTAL</span>
-                            <span className="text-primary">{formatCurrency(finalTotal)}</span>
-                        </div>
-                    </div>
-
-                    <div className="flex gap-2">
-                        <button
-                            onClick={() => setPaymentMethod('cash')}
-                            className={clsx(
-                                "flex-1 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all border-2 cursor-pointer flex items-center justify-center gap-2",
-                                paymentMethod === 'cash' ? "bg-primary text-white border-primary shadow-lg shadow-blue-100" : "bg-white text-gray-400 border-gray-100 hover:border-blue-100 hover:text-primary"
-                            )}
-                        >
-                            <BanknotesIcon className="w-4 h-4" /> TUNAI
-                        </button>
-                        <button
-                            onClick={() => setPaymentMethod('qris')}
-                            className={clsx(
-                                "flex-1 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all border-2 cursor-pointer flex items-center justify-center gap-2",
-                                paymentMethod === 'qris' ? "bg-primary text-white border-primary shadow-lg shadow-blue-100" : "bg-white text-gray-400 border-gray-100 hover:border-blue-100 hover:text-primary"
-                            )}
-                        >
-                            <QrCodeIcon className="w-4 h-4" /> QRIS
-                        </button>
-                    </div>
-
-                    <div className="space-y-3">
-                        <div>
-                            <div className="flex justify-between mb-1">
-                                <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest">NOMINAL BAYAR</label>
-                                {cleanChange > 0 && <span className="text-[9px] font-black text-green-600">KEMBALI: {formatCurrency(cleanChange)}</span>}
-                            </div>
-                            <input
-                                type="number"
-                                value={paymentAmount || ''}
-                                onChange={(e) => setPaymentAmount(Number(e.target.value))}
-                                placeholder="0"
-                                className="w-full bg-gray-50 border-2 border-gray-100 rounded-2xl py-3 px-4 text-xl font-black text-right text-gray-900 focus:border-primary focus:ring-0 transition-all placeholder:text-gray-200"
-                            />
-                        </div>
-
-                        <button
-                            onClick={handlePayment}
-                            disabled={cart.length === 0 || Number(paymentAmount) < finalTotal || isProcessing}
-                            className="w-full py-4 bg-primary text-white font-black text-sm uppercase tracking-[0.2em] rounded-2xl hover:bg-gray-900 transition-all disabled:opacity-30 disabled:grayscale cursor-pointer shadow-xl shadow-blue-100"
-                        >
-                            {isProcessing ? 'MEMPROSES...' : 'PROSES PEMBAYARAN'}
-                        </button>
                     </div>
                 </div>
             </div>
 
             {/* Modals & Success Overlays */}
             {showSuccess && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/80 backdrop-blur-sm px-4">
-                    <div className="bg-white rounded-[2rem] p-10 text-center max-w-sm w-full animate-bounce-in shadow-[0_0_100px_rgba(34,197,94,0.3)]">
-                        <div className="w-20 h-20 bg-green-100 rounded-[2rem] flex items-center justify-center mx-auto mb-6">
-                            <CheckCircleIcon className="w-12 h-12 text-green-500" />
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/80 backdrop-blur-sm p-4 overflow-y-auto">
+                    <div className="bg-white rounded-[2rem] p-6 text-center max-w-lg w-full animate-bounce-in shadow-2xl my-auto">
+                        <div className="flex items-center justify-between mb-6">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center">
+                                    <CheckCircleIcon className="w-6 h-6 text-green-500" />
+                                </div>
+                                <div className="text-left">
+                                    <h2 className="text-xl font-black text-gray-900 leading-none italic uppercase tracking-tighter">MANTAP BOS!</h2>
+                                    <p className="text-gray-400 text-[8px] font-black uppercase tracking-widest">Transaksi Berhasil</p>
+                                </div>
+                            </div>
+                            <div className="bg-gray-50 px-3 py-1.5 rounded-xl border border-gray-100">
+                                <p className="text-[7px] font-black text-gray-400 uppercase tracking-widest leading-none">Nomor Struk</p>
+                                <p className="font-mono font-black text-xs text-primary">{invoiceNumber}</p>
+                            </div>
                         </div>
-                        <h2 className="text-3xl font-black text-gray-900 mb-2 italic tracking-tighter uppercase">MANTAP BOS!</h2>
-                        <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest mb-8">Transaksi telah berhasil dicatat</p>
 
-                        <div className="bg-gray-50 rounded-2xl p-4 mb-8">
-                            <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">NOMOR INVOICE</p>
-                            <p className="font-mono font-black text-xl text-primary">{invoiceNumber}</p>
+                        {/* Receipt Preview */}
+                        <div className="mb-6 bg-gray-50 p-2 rounded-2xl border-2 border-dashed border-gray-200">
+                            <Receipt
+                                showOnScreen={true}
+                                storeInfo={storeProfile}
+                                transaction={{
+                                    invoice: invoiceNumber,
+                                    date: new Date(),
+                                    type: txType,
+                                    items: cart,
+                                    subtotal: cleanSubtotal,
+                                    discount: pointDiscount,
+                                    total: finalTotal,
+                                    paymentMethod,
+                                    paymentAmount,
+                                    change: cleanChange,
+                                    member: selectedMember
+                                }}
+                            />
                         </div>
 
                         <div className="grid grid-cols-2 gap-3">
                             <button
                                 onClick={handlePrint}
-                                className="flex flex-col items-center gap-2 py-4 bg-primary text-white font-black text-[10px] uppercase tracking-widest rounded-3xl hover:bg-primary/90 transition-all cursor-pointer shadow-lg shadow-primary/20"
+                                className="flex items-center justify-center gap-2 py-4 bg-primary text-white font-black text-xs uppercase tracking-widest rounded-3xl hover:bg-primary/90 transition-all cursor-pointer shadow-lg shadow-primary/20"
                             >
-                                <PrinterIcon className="w-6 h-6" /> CETAK STRUK
+                                <PrinterIcon className="w-5 h-5" /> CETAK STRUK
                             </button>
                             <button
                                 onClick={resetPOS}
-                                className="flex flex-col items-center gap-2 py-4 bg-gray-100 text-gray-600 font-black text-[10px] uppercase tracking-widest rounded-3xl hover:bg-gray-200 transition-all cursor-pointer"
+                                className="flex items-center justify-center gap-2 py-4 bg-gray-100 text-gray-600 font-black text-xs uppercase tracking-widest rounded-3xl hover:bg-gray-200 transition-all cursor-pointer"
                             >
-                                <PlusIcon className="w-6 h-6" /> DATA BARU
+                                <PlusIcon className="w-5 h-5" /> DATA BARU
                             </button>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* Hidden Receipt */}
+            {/* Hidden Receipt for Printing */}
             <Receipt
                 storeInfo={storeProfile}
                 transaction={{
@@ -794,7 +917,7 @@ export default function TransactionsPage() {
                     onSuccess={() => { setEditingService(null); refreshData(); }}
                 />
             )}
-        </div>
+        </>
     )
 }
 
