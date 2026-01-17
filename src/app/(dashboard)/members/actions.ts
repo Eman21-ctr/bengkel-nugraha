@@ -98,7 +98,7 @@ export async function createMember(prevState: any, formData: FormData) {
     }
 
     revalidatePath('/members')
-    return { success: true }
+    return { success: true, member_code: formattedCode }
 }
 
 export async function updateMember(prevState: any, formData: FormData) {

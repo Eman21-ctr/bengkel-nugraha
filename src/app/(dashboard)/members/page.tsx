@@ -1,11 +1,22 @@
 'use client'
 
-import { useState, useTransition, useEffect } from 'react'
+import { useState, useTransition, useEffect, useCallback } from 'react'
 import { useFormStatus } from 'react-dom'
-import { PlusIcon, MagnifyingGlassIcon, TrashIcon, UserIcon, PencilIcon } from '@heroicons/react/24/outline'
+import {
+    PlusIcon,
+    MagnifyingGlassIcon,
+    TrashIcon,
+    UserIcon,
+    PencilIcon,
+    IdentificationIcon,
+    PrinterIcon,
+    XMarkIcon
+} from '@heroicons/react/24/outline'
 import { createMember, deleteMember, getMembers, updateMember } from './actions'
+import { getStoreProfile } from '../settings/actions'
 import { useActionState } from 'react'
 import clsx from 'clsx'
+import { MemberCard } from '@/components/MemberCard'
 
 type Member = {
     id: string
@@ -28,12 +39,18 @@ export default function MembersPage() {
     const [editingMember, setEditingMember] = useState<Member | null>(null)
     const [searchQuery, setSearchQuery] = useState('')
     const [isPending, startTransition] = useTransition()
+    const [storeInfo, setStoreInfo] = useState({ name: '', address: '', phone: '' })
+    const [selectedMemberForCard, setSelectedMemberForCard] = useState<Member | null>(null)
 
     // Initial load
     useEffect(() => {
         startTransition(async () => {
-            const data = await getMembers()
+            const [data, profile] = await Promise.all([
+                getMembers(),
+                getStoreProfile()
+            ])
             setMembers(data as Member[])
+            setStoreInfo(profile)
         })
     }, [])
 
@@ -55,8 +72,25 @@ export default function MembersPage() {
         }
     }
 
+    const handlePrintCard = (member: Member) => {
+        setSelectedMemberForCard(member)
+        // Give time for state to update and component to render
+        setTimeout(() => {
+            document.body.classList.add('is-printing-member-card')
+            window.print()
+            document.body.classList.remove('is-printing-member-card')
+        }, 300)
+    }
+
     return (
         <div className="space-y-6">
+            {/* Hidden printable cards */}
+            {selectedMemberForCard && (
+                <div className="hidden">
+                    <MemberCard storeInfo={storeInfo} member={selectedMemberForCard} />
+                </div>
+            )}
+
             <div className="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-gray-200">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900">Membership</h1>
@@ -129,11 +163,6 @@ export default function MembersPage() {
                                                     {member.vehicle_type} - {member.vehicle_size}
                                                 </span>
                                             )}
-                                            {member.stnk_photo_url && (
-                                                <a href={member.stnk_photo_url} target="_blank" rel="noreferrer" className="text-[10px] font-black text-primary underline uppercase tracking-widest" title="Lihat STNK">
-                                                    STNK
-                                                </a>
-                                            )}
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-center">
@@ -146,6 +175,13 @@ export default function MembersPage() {
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                         <div className="flex justify-end gap-2">
+                                            <button
+                                                onClick={() => handlePrintCard(member)}
+                                                className="p-1 text-gray-400 hover:text-blue-600 transition-colors cursor-pointer"
+                                                title="Cetak Kartu Member"
+                                            >
+                                                <IdentificationIcon className="w-5 h-5" />
+                                            </button>
                                             <button
                                                 onClick={() => {
                                                     setEditingMember(member)
@@ -186,6 +222,13 @@ export default function MembersPage() {
                                     </div>
                                 </div>
                                 <div className="flex gap-1">
+                                    <button
+                                        onClick={() => handlePrintCard(member)}
+                                        className="p-2 text-gray-300 hover:text-blue-600"
+                                        title="Cetak Kartu"
+                                    >
+                                        <IdentificationIcon className="w-5 h-5" />
+                                    </button>
                                     <button
                                         onClick={() => {
                                             setEditingMember(member)
@@ -240,6 +283,7 @@ export default function MembersPage() {
             {isModalOpen && (
                 <MemberModal
                     member={editingMember}
+                    storeInfo={storeInfo}
                     onClose={() => {
                         setIsModalOpen(false)
                         setEditingMember(null)
@@ -256,10 +300,81 @@ export default function MembersPage() {
     )
 }
 
-function MemberModal({ member, onClose, onSuccess }: { member: Member | null, onClose: () => void, onSuccess: () => void }) {
+function MemberModal({ member, storeInfo, onClose, onSuccess }: { member: Member | null, storeInfo: any, onClose: () => void, onSuccess: () => void }) {
     const [state, formAction] = useActionState(member ? updateMember : createMember, null)
     const { pending } = useFormStatus()
     const [vehicleType, setVehicleType] = useState(member?.vehicle_type || 'R2')
+    const [showSuccessCard, setShowSuccessCard] = useState(false)
+    const [newMemberCode, setNewMemberCode] = useState('')
+
+    useEffect(() => {
+        if (state?.success) {
+            if (!member && state.member_code) {
+                setNewMemberCode(state.member_code)
+                setShowSuccessCard(true)
+            } else {
+                onSuccess()
+            }
+        }
+    }, [state, onSuccess, member])
+
+    const handlePrintNewCard = () => {
+        const memberData = {
+            name: (document.querySelector('input[name="name"]') as HTMLInputElement)?.value || '',
+            member_code: newMemberCode,
+            phone: (document.querySelector('input[name="phone"]') as HTMLInputElement)?.value || '',
+            join_date: new Date().toISOString()
+        }
+
+        // This is a bit hacky but works for the success modal
+        document.body.classList.add('is-printing-member-card')
+        window.print()
+        document.body.classList.remove('is-printing-member-card')
+    }
+
+    if (showSuccessCard) {
+        return (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm" onClick={onSuccess}></div>
+                <div className="relative transform overflow-hidden rounded-[32px] bg-white p-8 shadow-2xl transition-all w-full max-w-md text-center">
+                    <div className="mb-6">
+                        <div className="mx-auto h-16 w-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+                            <PlusIcon className="h-8 w-8 text-green-600" />
+                        </div>
+                        <h3 className="text-2xl font-black text-gray-900 tracking-tight">MEMBER TERDAFTAR!</h3>
+                        <p className="text-gray-500 text-sm font-bold uppercase tracking-widest mt-1">Kartu member siap dicetak</p>
+                    </div>
+
+                    <div className="flex justify-center mb-8 scale-90 sm:scale-100">
+                        <MemberCard
+                            storeInfo={storeInfo}
+                            member={{
+                                name: (document.querySelector('input[name="name"]') as HTMLInputElement)?.value || 'Member',
+                                member_code: newMemberCode,
+                                phone: (document.querySelector('input[name="phone"]') as HTMLInputElement)?.value || '-',
+                                join_date: new Date().toISOString()
+                            }}
+                        />
+                    </div>
+
+                    <div className="space-y-3">
+                        <button
+                            onClick={handlePrintNewCard}
+                            className="w-full py-4 bg-primary text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-blue-700 shadow-xl shadow-blue-100 transition-all cursor-pointer flex items-center justify-center gap-2"
+                        >
+                            <PrinterIcon className="w-5 h-5" /> CETAK KARTU MEMBER
+                        </button>
+                        <button
+                            onClick={onSuccess}
+                            className="w-full py-4 bg-gray-100 text-gray-500 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-gray-200 transition-all cursor-pointer"
+                        >
+                            SELESAI
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )
+    }
 
     return (
         <div className="fixed inset-0 z-[100] overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
@@ -286,12 +401,7 @@ function MemberModal({ member, onClose, onSuccess }: { member: Member | null, on
                                 ⚠️ {state.error}
                             </div>
                         )}
-                        {state?.success && (
-                            <div className="text-green-600 text-xs font-bold text-center bg-green-50 p-3 rounded-xl border border-green-100">
-                                ✅ Berhasil! Mengalihkan...
-                                {setTimeout(() => onSuccess(), 1000) && ""}
-                            </div>
-                        )}
+                        {/* Success state is handled by showSuccessCard effect now */}
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="col-span-2">
