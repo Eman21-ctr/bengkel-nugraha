@@ -71,9 +71,9 @@ export async function searchMembers(query: string) {
     const supabase = await createClient()
     const { data, error } = await supabase
         .from('members')
-        .select('id, name, phone, vehicle_plate, points')
-        .or(`name.ilike.%${query}%,phone.ilike.%${query}%,vehicle_plate.ilike.%${query}%`)
-        .limit(5)
+        .select('id, name, phone, vehicle_plate, points, member_code, vehicle_type, vehicle_size, visit_count')
+        .or(`name.ilike.%${query}%,phone.ilike.%${query}%,vehicle_plate.ilike.%${query}%,member_code.ilike.%${query}%`)
+        .limit(10)
 
     if (error) {
         console.error('Error searching members:', error)
@@ -87,7 +87,7 @@ export async function getMemberById(id: string) {
     const supabase = await createClient()
     const { data } = await supabase
         .from('members')
-        .select('id, name, phone, vehicle_plate, points')
+        .select('id, name, phone, vehicle_plate, points, member_code, vehicle_type, vehicle_size, visit_count')
         .eq('id', id)
         .single()
 
@@ -200,7 +200,7 @@ export async function processTransaction(payload: TransactionPayload) {
             const pointConfig = await getPointConfig()
             const { data: member } = await supabase
                 .from('members')
-                .select('points')
+                .select('points, visit_count')
                 .eq('id', payload.member_id)
                 .single()
 
@@ -211,7 +211,10 @@ export async function processTransaction(payload: TransactionPayload) {
 
                 await supabase
                     .from('members')
-                    .update({ points: newPoints })
+                    .update({
+                        points: newPoints,
+                        visit_count: (member.visit_count || 0) + 1
+                    })
                     .eq('id', payload.member_id)
             }
         }
