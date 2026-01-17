@@ -48,6 +48,14 @@
   }
 }
 
+/* Default hide printable components on screen */
+#receipt-print,
+#queue-ticket-print,
+[id^="member-card-"],
+.printable-area {
+  display: none;
+}
+
 @media print {
   body * {
     visibility: hidden;
@@ -59,17 +67,12 @@
     visibility: visible;
   }
 
-  #receipt-print {
+  body.is-printing-receipt #receipt-print {
+    display: block !important;
     position: absolute;
     left: 0;
     top: 0;
     width: 80mm;
-    display: none;
-    /* Default hidden unless triggered by class */
-  }
-
-  body.is-printing-receipt #receipt-print {
-    display: block !important;
   }
 
   /* Queue Ticket Logic */
@@ -78,24 +81,15 @@
     visibility: visible;
   }
 
-  #queue-ticket-print {
+  body.is-printing-ticket #queue-ticket-print {
+    display: block !important;
     position: absolute;
     left: 0;
     top: 0;
     width: 80mm;
-    display: none;
-    /* Default hidden unless triggered by class */
-  }
-
-  body.is-printing-ticket #queue-ticket-print {
-    display: block !important;
   }
 
   /* Member Card Logic */
-  [id^="member-card-"] {
-    display: none !important;
-  }
-
   body.is-printing-member-card [id^="member-card-"],
   body.is-printing-member-card [id^="member-card-"] * {
     visibility: visible;
@@ -108,12 +102,6 @@
     top: 0;
   }
 
-  /* Hide other elements during card printing */
-  body.is-printing-member-card #receipt-print,
-  body.is-printing-member-card #queue-ticket-print {
-    display: none !important;
-  }
-
   /* Report Logic */
   .printable-area,
   .printable-area * {
@@ -121,6 +109,7 @@
   }
 
   .printable-area {
+    display: block !important;
     position: absolute;
     left: 0;
     top: 0;

@@ -74,21 +74,21 @@ export default function MembersPage() {
 
     const handlePrintCard = (member: Member) => {
         setSelectedMemberForCard(member)
-        // Give time for state to update and component to render
+        // Give time for state to update and barcode to generate
         setTimeout(() => {
             document.body.classList.add('is-printing-member-card')
             window.print()
-            document.body.classList.remove('is-printing-member-card')
-        }, 300)
+            setTimeout(() => {
+                document.body.classList.remove('is-printing-member-card')
+            }, 500)
+        }, 500)
     }
 
     return (
         <div className="space-y-6">
-            {/* Hidden printable cards */}
+            {/* Printable cards for background printing */}
             {selectedMemberForCard && (
-                <div className="hidden">
-                    <MemberCard storeInfo={storeInfo} member={selectedMemberForCard} />
-                </div>
+                <MemberCard storeInfo={storeInfo} member={selectedMemberForCard} />
             )}
 
             <div className="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-gray-200">
@@ -309,8 +309,9 @@ function MemberModal({ member, storeInfo, onClose, onSuccess }: { member: Member
 
     useEffect(() => {
         if (state?.success) {
-            if (!member && state.member_code) {
-                setNewMemberCode(state.member_code)
+            const res = state as { success: boolean, member_code?: string }
+            if (!member && res.member_code) {
+                setNewMemberCode(res.member_code)
                 setShowSuccessCard(true)
             } else {
                 onSuccess()
