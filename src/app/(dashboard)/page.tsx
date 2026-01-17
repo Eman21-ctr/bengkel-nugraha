@@ -27,6 +27,14 @@ export default async function Dashboard() {
     redirect('/login')
   }
 
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('full_name')
+    .eq('id', user.id)
+    .single()
+
+  const displayName = profile?.full_name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Admin'
+
   const stats = await getDashboardStats()
 
   function formatCurrency(amount: number) {
@@ -93,8 +101,8 @@ export default async function Dashboard() {
           <div className="flex justify-between items-end">
             <div className="space-y-1">
               <p className="text-blue-100 text-xs font-bold tracking-wide leading-none">Selamat {greeting},</p>
-              <h1 className="text-3xl font-black text-white tracking-tight leading-none">
-                <span className="capitalize">{user.email?.split('@')[0] || 'Nugraha'}</span>
+              <h1 className="text-lg font-black text-white tracking-tight leading-none">
+                <span className="capitalize">{displayName}</span>
               </h1>
             </div>
           </div>
@@ -111,7 +119,7 @@ export default async function Dashboard() {
         <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div className="space-y-1">
             <h1 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight leading-tight">
-              Selamat {greeting}, <span className="text-primary transition-colors hover:text-blue-700">Nugraha!</span>
+              Selamat {greeting}, <span className="text-primary transition-colors hover:text-blue-700">{displayName}!</span>
             </h1>
             <p className="text-gray-500 text-lg font-medium flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
@@ -138,7 +146,7 @@ export default async function Dashboard() {
         </header>
 
         {/* Premium Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Revenue Card - Premium White with Subtle Details */}
           <div className="relative overflow-hidden bg-white p-7 rounded-[32px] shadow-xl shadow-blue-100/50 group transition-all hover:translate-y-[-4px] border border-gray-100">
             <div className="absolute -top-12 -right-12 w-48 h-48 bg-blue-50 rounded-full opacity-50 group-hover:scale-110 transition-transform duration-500" />
@@ -153,18 +161,50 @@ export default async function Dashboard() {
                   </span>
                 </div>
                 <h3 className="text-gray-400 text-xs font-bold uppercase tracking-[0.2em] mb-1">Pemasukan Hari Ini</h3>
-                <p className="text-4xl font-black text-gray-900 tracking-tight">{formatCurrency(stats.totalRevenue)}</p>
+                <p className="text-3xl font-black text-gray-900 tracking-tight">{formatCurrency(stats.totalRevenue)}</p>
               </div>
 
-              <div className="mt-8 pt-6 border-t border-gray-50 flex gap-6 text-xs">
+              <div className="mt-8 pt-6 border-t border-gray-50 flex gap-4 text-xs">
                 <div className="flex-1">
                   <p className="text-[10px] text-gray-400 uppercase font-black tracking-widest mb-1">Bengkel</p>
-                  <p className="font-extrabold text-gray-800">{formatCurrency(stats.bengkelSales)}</p>
+                  <p className="font-extrabold text-gray-800 text-[10px]">{formatCurrency(stats.bengkelSales)}</p>
                 </div>
                 <div className="w-px h-10 bg-gray-100" />
                 <div className="flex-1">
                   <p className="text-[10px] text-gray-400 uppercase font-black tracking-widest mb-1">Kafe</p>
-                  <p className="font-extrabold text-blue-600">{formatCurrency(stats.kafeSales)}</p>
+                  <p className="font-extrabold text-blue-600 text-[10px]">{formatCurrency(stats.kafeSales)}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Queue Card - NEW PRODUCT */}
+          <div className="bg-white p-7 rounded-[32px] shadow-xl shadow-blue-100/30 group border border-gray-100 hover:translate-y-[-4px] transition-all relative overflow-hidden">
+            <div className="absolute -top-12 -right-12 w-48 h-48 bg-blue-50 rounded-full opacity-50 group-hover:scale-110 transition-transform duration-500" />
+            <div className="flex flex-col h-full justify-between relative z-10">
+              <div>
+                <div className="flex justify-between items-center mb-6">
+                  <div className="bg-primary p-3 rounded-2xl shadow-lg shadow-blue-200">
+                    <ClockIcon className="w-6 h-6 text-white" />
+                  </div>
+                  <div className="flex -space-x-2">
+                    <div className="w-8 h-8 rounded-full border-2 border-white bg-blue-600 flex items-center justify-center text-[10px] font-black text-white italic">Q</div>
+                    <div className="w-8 h-8 rounded-full border-2 border-white bg-orange-500 flex items-center justify-center text-[10px] font-black text-white italic">A</div>
+                  </div>
+                </div>
+                <h3 className="text-gray-400 text-xs font-bold uppercase tracking-[0.2em] mb-1">Antrean Aktif</h3>
+                <p className="text-4xl font-black text-gray-900 tracking-tight">{(stats as any).processingQueues + (stats as any).waitingQueues}</p>
+              </div>
+              <div className="mt-8">
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="bg-blue-50/50 p-3 rounded-2xl border border-blue-100/50 flex flex-col items-center">
+                    <span className="text-[9px] font-black uppercase text-blue-700 tracking-wider">Mengerjakan</span>
+                    <span className="text-lg font-black text-blue-900">{(stats as any).processingQueues}</span>
+                  </div>
+                  <div className="bg-orange-50/50 p-3 rounded-2xl border border-orange-100/50 flex flex-col items-center">
+                    <span className="text-[9px] font-black uppercase text-orange-700 tracking-wider">Menunggu</span>
+                    <span className="text-lg font-black text-orange-900">{(stats as any).waitingQueues}</span>
+                  </div>
                 </div>
               </div>
             </div>

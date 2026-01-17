@@ -41,12 +41,24 @@ export async function getDashboardStats() {
     const lowStockItems = products?.filter(p => p.stock <= p.min_stock) || []
     const lowStockCount = lowStockItems.length
 
+    // 3. Get queue counts today
+    const { data: queueData } = await supabase
+        .from('queues')
+        .select('status')
+        .gte('created_at', start)
+        .lte('created_at', end)
+
+    const waitingQueues = queueData?.filter(q => q.status === 'waiting').length || 0
+    const processingQueues = queueData?.filter(q => q.status === 'processing').length || 0
+
     return {
         totalTransactions,
         totalRevenue,
         bengkelSales,
         kafeSales,
         lowStockCount,
-        lowStockItems: lowStockItems.slice(0, 5)
+        lowStockItems: lowStockItems.slice(0, 5),
+        waitingQueues,
+        processingQueues
     }
 }

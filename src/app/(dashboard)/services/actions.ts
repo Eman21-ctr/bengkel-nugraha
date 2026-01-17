@@ -11,6 +11,13 @@ export type Service = {
     barcode: string | null
     is_active: boolean
     created_at: string
+    prices?: ServicePrice[]
+}
+
+export type ServicePrice = {
+    vehicle_type: 'R2' | 'R3' | 'R4'
+    vehicle_size: 'Kecil' | 'Sedang' | 'Besar' | 'Jumbo'
+    price: number
 }
 
 export async function getServices() {
@@ -22,6 +29,35 @@ export async function getServices() {
 
     if (error) {
         console.error('Error fetching services:', error)
+        return []
+    }
+    const services = data || []
+
+    // Fetch prices for each service
+    const { data: prices, error: priceError } = await supabase
+        .from('service_prices')
+        .select('*')
+
+    if (priceError) {
+        console.error('Error fetching service prices:', priceError)
+        return services
+    }
+
+    return services.map(s => ({
+        ...s,
+        prices: (prices || []).filter(p => p.service_id === s.id)
+    }))
+}
+
+export async function getServicePrices(serviceId: string) {
+    const supabase = await createClient()
+    const { data, error } = await supabase
+        .from('service_prices')
+        .select('vehicle_type, vehicle_size, price')
+        .eq('service_id', serviceId)
+
+    if (error) {
+        console.error('Error fetching service prices:', error)
         return []
     }
     return data
@@ -101,6 +137,34 @@ export async function updateService(prevState: any, formData: FormData) {
     if (error) {
         console.error('Error updating service:', error)
         return { error: 'Gagal memperbarui jasa' }
+    }
+
+    revalidatePath('/services')
+    revalidatePath('/transactions')
+    return { success: true }
+}
+
+export async function updateServicePrices(serviceId: string, prices: ServicePrice[]) {
+    const supabase = await createClient()
+
+    // Delete existing prices for this service
+    await supabase.from('service_prices').delete().eq('service_id', serviceId)
+
+    if (prices.length === 0) return { success: true }
+
+    // Insert new prices
+    const toInsert = prices.map(p => ({
+        service_id: serviceId,
+        vehicle_type: p.vehicle_type,
+        vehicle_size: p.vehicle_size,
+        price: p.price
+    }))
+
+    const { error } = await supabase.from('service_prices').insert(toInsert)
+
+    if (error) {
+        console.error('Error updating service prices:', error)
+        return { error: 'Gagal memperbarui daftar harga' }
     }
 
     revalidatePath('/services')

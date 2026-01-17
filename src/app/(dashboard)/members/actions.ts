@@ -25,6 +25,29 @@ export async function getMembers(query: string = '') {
     return data
 }
 
+async function uploadSTNK(supabase: any, file: File, memberCode: string) {
+    if (!file || file.size === 0 || typeof file === 'string') return null
+
+    const fileExt = file.name.split('.').pop()
+    const fileName = `${memberCode}_${Date.now()}.${fileExt}`
+    const filePath = `stnk/${fileName}`
+
+    const { error: uploadError } = await supabase.storage
+        .from('members')
+        .upload(filePath, file)
+
+    if (uploadError) {
+        console.error('Error uploading STNK:', uploadError)
+        return null
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+        .from('members')
+        .getPublicUrl(filePath)
+
+    return publicUrl
+}
+
 export async function createMember(prevState: any, formData: FormData) {
     const supabase = await createClient()
 
@@ -34,7 +57,7 @@ export async function createMember(prevState: any, formData: FormData) {
     const vehicle_type = formData.get('vehicle_type') as string
     const vehicle_size = formData.get('vehicle_size') as string
     const vehicle_model = formData.get('vehicle_model') as string
-    const stnk_photo_url = formData.get('stnk_photo_url') as string
+    const stnk_file = formData.get('stnk_photo') as File
 
     if (!name || !phone) {
         return { error: 'Nama dan No HP wajib diisi' }
@@ -45,9 +68,10 @@ export async function createMember(prevState: any, formData: FormData) {
         .from('members')
         .select('*', { count: 'exact', head: true })
 
-    const member_code = `MBR${(count || 0) + 1}`.padStart(6, '0').replace('000MBR', 'MBR')
-    // Simpler format as per spec: MBR001, MBR002
     const formattedCode = `MBR${String((count || 0) + 1).padStart(3, '0')}`
+
+    // Upload STNK if exists
+    const stnk_photo_url = await uploadSTNK(supabase, stnk_file, formattedCode)
 
     const { error } = await supabase
         .from('members')
@@ -67,7 +91,7 @@ export async function createMember(prevState: any, formData: FormData) {
 
     if (error) {
         console.error('Error creating member:', error)
-        if (error.code === '23505') { // Unique violation
+        if (error.code === '23505') {
             return { error: 'No HP atau Kode Member sudah terdaftar.' }
         }
         return { error: 'Gagal menambahkan member.' }
@@ -80,15 +104,24 @@ export async function createMember(prevState: any, formData: FormData) {
 export async function updateMember(prevState: any, formData: FormData) {
     const supabase = await createClient()
     const id = formData.get('id') as string
+    const member_code = formData.get('member_code') as string
+    const stnk_file = formData.get('stnk_photo') as File
 
-    const updates = {
+    const updates: any = {
         name: formData.get('name') as string,
         phone: formData.get('phone') as string,
         vehicle_plate: formData.get('vehicle_plate') as string,
         vehicle_type: formData.get('vehicle_type') as string,
         vehicle_size: formData.get('vehicle_size') as string,
         vehicle_model: formData.get('vehicle_model') as string,
-        stnk_photo_url: formData.get('stnk_photo_url') as string,
+    }
+
+    // Only upload if new file provided
+    if (stnk_file && stnk_file.size > 0) {
+        const stnk_photo_url = await uploadSTNK(supabase, stnk_file, member_code || 'MBR')
+        if (stnk_photo_url) {
+            updates.stnk_photo_url = stnk_photo_url
+        }
     }
 
     const { error } = await supabase

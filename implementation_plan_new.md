@@ -25,13 +25,20 @@ This plan covers the implementation- [x] Planning and Research Phase
 - **UI**: New "Kelola Permission" settings page.
 - **Logic**: Middleware/Component-level access control.
 
+### 6. POS Workflow Refinement (NEW)
+- **UI**: Make member selection the primary first step.
+- **Auto-Logic**: Link transaction completion to Queue completion based on plate number.
+- **Loyalty**: Clearly highlight reward eligibility and simplify claiming.
+- **Pricing**: Show visual indicator when vehicle-specific pricing is applied.
+
 ## SQL Schema Update (Supabase)
 I will provide `supabase_schema_update.sql` for these changes.
 
 ---
 ## Progress Tracking
-- [ ] Member Enhancements
-- [ ] Dynamic Service Pricing
-- [ ] Queue Management
-- [ ] Loyalty Program
-- [ ] Role & Permission System
+- [x] Member Enhancements
+- [x] Dynamic Service Pricing
+- [x] Queue Management
+- [x] Loyalty Program
+- [x] Role & Permission System
+- [ ] POS Workflow & UI Polish

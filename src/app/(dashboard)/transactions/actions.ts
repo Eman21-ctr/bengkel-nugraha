@@ -43,12 +43,16 @@ export async function getProductsForPOS() {
     return data
 }
 
-// Fetch services for POS - Simplified to show all available services
+// Fetch services for POS - Now with dynamic prices!
 export async function getServicesForPOS() {
     const supabase = await createClient()
     const { data, error } = await supabase
         .from('services')
-        .select('*')
+        .select(`
+            *,
+            prices:service_prices(vehicle_type, vehicle_size, price)
+        `)
+        .eq('is_active', true) // Filter active services only
         .order('name')
 
     if (error) {
@@ -60,7 +64,8 @@ export async function getServicesForPOS() {
         id: s.id,
         name: s.name,
         price: Number(s.price) || 0,
-        description: s.description
+        description: s.description,
+        prices: s.prices // Pass the nested prices to frontend
     }))
 }
 
@@ -216,6 +221,21 @@ export async function processTransaction(payload: TransactionPayload) {
                         visit_count: (member.visit_count || 0) + 1
                     })
                     .eq('id', payload.member_id)
+
+                // 5. Auto-complete Active Queue for this member/plate
+                // We look for 'Menunggu' or 'Sedang Dilayani' for today
+                const now = new Date()
+                const today = now.toISOString().split('T')[0]
+                const startOfDay = `${today}T00:00:00+07:00`
+                const endOfDay = `${today}T23:59:59+07:00`
+
+                await supabase
+                    .from('queues')
+                    .update({ status: 'Selesai' })
+                    .eq('member_id', payload.member_id)
+                    .in('status', ['Menunggu', 'Sedang Dilayani', 'waiting', 'processing']) // matching both ID and EN versions if any
+                    .gte('created_at', startOfDay)
+                    .lte('created_at', endOfDay)
             }
         }
 

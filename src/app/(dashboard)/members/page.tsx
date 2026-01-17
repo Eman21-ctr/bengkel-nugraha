@@ -2,8 +2,8 @@
 
 import { useState, useTransition, useEffect } from 'react'
 import { useFormStatus } from 'react-dom'
-import { PlusIcon, MagnifyingGlassIcon, TrashIcon, UserIcon } from '@heroicons/react/24/outline'
-import { createMember, deleteMember, getMembers } from './actions'
+import { PlusIcon, MagnifyingGlassIcon, TrashIcon, UserIcon, PencilIcon } from '@heroicons/react/24/outline'
+import { createMember, deleteMember, getMembers, updateMember } from './actions'
 import { useActionState } from 'react'
 import clsx from 'clsx'
 
@@ -25,6 +25,7 @@ type Member = {
 export default function MembersPage() {
     const [members, setMembers] = useState<Member[]>([])
     const [isModalOpen, setIsModalOpen] = useState(false)
+    const [editingMember, setEditingMember] = useState<Member | null>(null)
     const [searchQuery, setSearchQuery] = useState('')
     const [isPending, startTransition] = useTransition()
 
@@ -62,7 +63,10 @@ export default function MembersPage() {
                     <p className="text-sm text-gray-500">Kelola database pelanggan, kendaraan & loyalitas</p>
                 </div>
                 <button
-                    onClick={() => setIsModalOpen(true)}
+                    onClick={() => {
+                        setEditingMember(null)
+                        setIsModalOpen(true)
+                    }}
                     className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary cursor-pointer transition-all"
                 >
                     <PlusIcon className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
@@ -125,6 +129,11 @@ export default function MembersPage() {
                                                     {member.vehicle_type} - {member.vehicle_size}
                                                 </span>
                                             )}
+                                            {member.stnk_photo_url && (
+                                                <a href={member.stnk_photo_url} target="_blank" rel="noreferrer" className="text-[10px] font-black text-primary underline uppercase tracking-widest" title="Lihat STNK">
+                                                    STNK
+                                                </a>
+                                            )}
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-center">
@@ -136,12 +145,25 @@ export default function MembersPage() {
                                         {member.points}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                        <button
-                                            onClick={() => handleDelete(member.id)}
-                                            className="text-gray-400 hover:text-red-600 transition-colors"
-                                        >
-                                            <TrashIcon className="w-5 h-5" />
-                                        </button>
+                                        <div className="flex justify-end gap-2">
+                                            <button
+                                                onClick={() => {
+                                                    setEditingMember(member)
+                                                    setIsModalOpen(true)
+                                                }}
+                                                className="p-1 text-gray-400 hover:text-primary transition-colors cursor-pointer"
+                                                title="Edit Member"
+                                            >
+                                                <PencilIcon className="w-5 h-5" />
+                                            </button>
+                                            <button
+                                                onClick={() => handleDelete(member.id)}
+                                                className="p-1 text-gray-400 hover:text-red-600 transition-colors cursor-pointer"
+                                                title="Hapus Member"
+                                            >
+                                                <TrashIcon className="w-5 h-5" />
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
@@ -163,12 +185,23 @@ export default function MembersPage() {
                                         <p className="text-[11px] font-bold text-primary mt-0.5">{member.member_code} • {member.phone}</p>
                                     </div>
                                 </div>
-                                <button
-                                    onClick={() => handleDelete(member.id)}
-                                    className="p-1 text-gray-300 hover:text-red-600"
-                                >
-                                    <TrashIcon className="w-5 h-5" />
-                                </button>
+                                <div className="flex gap-1">
+                                    <button
+                                        onClick={() => {
+                                            setEditingMember(member)
+                                            setIsModalOpen(true)
+                                        }}
+                                        className="p-2 text-gray-300 hover:text-primary"
+                                    >
+                                        <PencilIcon className="w-5 h-5" />
+                                    </button>
+                                    <button
+                                        onClick={() => handleDelete(member.id)}
+                                        className="p-2 text-gray-300 hover:text-red-600"
+                                    >
+                                        <TrashIcon className="w-5 h-5" />
+                                    </button>
+                                </div>
                             </div>
 
                             <div className="mt-3 flex flex-wrap gap-2">
@@ -205,10 +238,15 @@ export default function MembersPage() {
             </div>
 
             {isModalOpen && (
-                <AddMemberModal
-                    onClose={() => setIsModalOpen(false)}
+                <MemberModal
+                    member={editingMember}
+                    onClose={() => {
+                        setIsModalOpen(false)
+                        setEditingMember(null)
+                    }}
                     onSuccess={async () => {
                         setIsModalOpen(false)
+                        setEditingMember(null)
                         const data = await getMembers(searchQuery)
                         setMembers(data as Member[])
                     }}
@@ -218,10 +256,10 @@ export default function MembersPage() {
     )
 }
 
-function AddMemberModal({ onClose, onSuccess }: { onClose: () => void, onSuccess: () => void }) {
-    const [state, formAction] = useActionState(createMember, null)
+function MemberModal({ member, onClose, onSuccess }: { member: Member | null, onClose: () => void, onSuccess: () => void }) {
+    const [state, formAction] = useActionState(member ? updateMember : createMember, null)
     const { pending } = useFormStatus()
-    const [vehicleType, setVehicleType] = useState('R2')
+    const [vehicleType, setVehicleType] = useState(member?.vehicle_type || 'R2')
 
     return (
         <div className="fixed inset-0 z-[100] overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
@@ -231,13 +269,18 @@ function AddMemberModal({ onClose, onSuccess }: { onClose: () => void, onSuccess
                     <div className="bg-primary px-6 py-8 text-center relative overflow-hidden">
                         <div className="absolute top-0 left-0 w-full h-full opacity-10 bg-[radial-gradient(circle_at_50%_120%,rgba(255,255,255,1),transparent)]" />
                         <div className="mx-auto h-16 w-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md border border-white/30">
-                            <PlusIcon className="h-8 w-8 text-white" />
+                            {member ? <PencilIcon className="h-8 w-8 text-white" /> : <PlusIcon className="h-8 w-8 text-white" />}
                         </div>
-                        <h3 className="mt-4 text-xl font-black text-white italic tracking-tight" id="modal-title">PENDAFTARAN MEMBER</h3>
-                        <p className="text-white/70 text-xs font-bold uppercase tracking-widest mt-1">Lengkapi data kendaraan pelanggan</p>
+                        <h3 className="mt-4 text-xl font-black text-white italic tracking-tight" id="modal-title">
+                            {member ? 'EDIT DATA MEMBER' : 'PENDAFTARAN MEMBER'}
+                        </h3>
+                        <p className="text-white/70 text-xs font-bold uppercase tracking-widest mt-1">
+                            {member ? 'Perbarui informasi pelanggan' : 'Lengkapi data kendaraan pelanggan'}
+                        </p>
                     </div>
 
                     <form action={formAction} className="p-8 space-y-6">
+                        {member && <input type="hidden" name="id" value={member.id} />}
                         {state?.error && (
                             <div className="text-red-600 text-xs font-bold text-center bg-red-50 p-3 rounded-xl border border-red-100 animate-shake">
                                 ⚠️ {state.error}
@@ -253,43 +296,55 @@ function AddMemberModal({ onClose, onSuccess }: { onClose: () => void, onSuccess
                         <div className="grid grid-cols-2 gap-4">
                             <div className="col-span-2">
                                 <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Nama Member</label>
-                                <input type="text" name="name" required className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm font-bold text-gray-900 focus:ring-2 focus:ring-primary transition-all" placeholder="Nama Lengkap" />
+                                <input type="text" name="name" defaultValue={member?.name} required className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm font-bold text-gray-900 focus:ring-2 focus:ring-primary transition-all" placeholder="Nama Lengkap" />
                             </div>
                             <div>
                                 <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">No HP / WhatsApp</label>
-                                <input type="tel" name="phone" required className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm font-bold text-gray-900 focus:ring-2 focus:ring-primary transition-all" placeholder="0812..." />
+                                <input type="tel" name="phone" defaultValue={member?.phone} required className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm font-bold text-gray-900 focus:ring-2 focus:ring-primary transition-all" placeholder="0812..." />
                             </div>
                             <div>
                                 <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Plat Nomor</label>
-                                <input type="text" name="vehicle_plate" className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm font-bold text-gray-900 focus:ring-2 focus:ring-primary transition-all uppercase" placeholder="B 1234 XYZ" />
+                                <input type="text" name="vehicle_plate" defaultValue={member?.vehicle_plate || ''} className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm font-bold text-gray-900 focus:ring-2 focus:ring-primary transition-all uppercase" placeholder="B 1234 XYZ" />
                             </div>
                         </div>
 
                         <div className="space-y-4 pt-2 border-t border-gray-100">
-                            <div className="grid grid-cols-3 gap-2">
-                                <label className="col-span-3 block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-0 ml-1">Jenis Kendaraan</label>
-                                {['R2', 'R3', 'R4'].map((type) => (
-                                    <button
-                                        key={type}
-                                        type="button"
-                                        onClick={() => setVehicleType(type)}
-                                        className={clsx(
-                                            "py-2.5 rounded-xl text-xs font-black transition-all border-2",
-                                            vehicleType === type
-                                                ? "bg-primary border-primary text-white shadow-lg shadow-blue-200"
-                                                : "bg-white border-gray-100 text-gray-400 hover:border-gray-200"
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="col-span-2">
+                                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Foto STNK</label>
+                                    <div className="flex items-center gap-4">
+                                        <input type="file" name="stnk_photo" accept="image/*" className="block w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:bg-primary/10 file:text-primary hover:file:bg-primary/20 transition-all" />
+                                        {member?.stnk_photo_url && (
+                                            <a href={member.stnk_photo_url} target="_blank" rel="noreferrer" className="text-[10px] font-black text-primary underline uppercase tracking-widest whitespace-nowrap">Lihat Foto</a>
                                         )}
-                                    >
-                                        {type === 'R2' ? '🏍️ R2' : type === 'R3' ? '🛺 R3' : '🚗 R4'}
-                                    </button>
-                                ))}
-                                <input type="hidden" name="vehicle_type" value={vehicleType} />
+                                    </div>
+                                    <input type="hidden" name="member_code" value={member?.member_code || ''} />
+                                </div>
+                                <div className="col-span-2 grid grid-cols-3 gap-2">
+                                    <label className="col-span-3 block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-0 ml-1">Jenis Kendaraan</label>
+                                    {['R2', 'R3', 'R4'].map((type) => (
+                                        <button
+                                            key={type}
+                                            type="button"
+                                            onClick={() => setVehicleType(type as any)}
+                                            className={clsx(
+                                                "py-2.5 rounded-xl text-xs font-black transition-all border-2",
+                                                vehicleType === type
+                                                    ? "bg-primary border-primary text-white shadow-lg shadow-blue-200"
+                                                    : "bg-white border-gray-100 text-gray-400 hover:border-gray-200"
+                                            )}
+                                        >
+                                            {type === 'R2' ? '🏍️ R2' : type === 'R3' ? '🛺 R3' : '🚗 R4'}
+                                        </button>
+                                    ))}
+                                    <input type="hidden" name="vehicle_type" value={vehicleType} />
+                                </div>
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Ukuran</label>
-                                    <select name="vehicle_size" className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm font-bold text-gray-900 focus:ring-2 focus:ring-primary transition-all">
+                                    <select name="vehicle_size" defaultValue={member?.vehicle_size || 'Kecil'} className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm font-bold text-gray-900 focus:ring-2 focus:ring-primary transition-all">
                                         <option value="Kecil">Kecil</option>
                                         <option value="Sedang">Sedang</option>
                                         <option value="Besar">Besar</option>
@@ -298,7 +353,7 @@ function AddMemberModal({ onClose, onSuccess }: { onClose: () => void, onSuccess
                                 </div>
                                 <div>
                                     <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Merk / Tipe</label>
-                                    <input type="text" name="vehicle_model" className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm font-bold text-gray-900 focus:ring-2 focus:ring-primary transition-all" placeholder="Vario 150, dll" />
+                                    <input type="text" name="vehicle_model" defaultValue={member?.vehicle_model || ''} className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm font-bold text-gray-900 focus:ring-2 focus:ring-primary transition-all" placeholder="Vario 150, dll" />
                                 </div>
                             </div>
                         </div>
@@ -316,7 +371,7 @@ function AddMemberModal({ onClose, onSuccess }: { onClose: () => void, onSuccess
                                 disabled={pending}
                                 className="flex-[2] px-4 py-4 bg-primary text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-blue-700 shadow-xl shadow-blue-100 disabled:opacity-50 transition-all cursor-pointer"
                             >
-                                {pending ? 'MEMPROSES...' : 'DAFTAR SEKARANG'}
+                                {pending ? 'MEMPROSES...' : member ? 'SIMPAN PERUBAHAN' : 'DAFTAR SEKARANG'}
                             </button>
                         </div>
                     </form>

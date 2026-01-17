@@ -94,14 +94,18 @@ export async function getCurrentUser() {
 
     const { data: profile } = await supabase
         .from('profiles')
-        .select('*')
+        .select(`
+            *,
+            role:roles (name)
+        `)
         .eq('id', user.id)
         .single()
 
     return {
         id: user.id,
         email: user.email,
-        ...profile
+        full_name: profile?.full_name,
+        role: profile?.role?.name || 'Belum diatur'
     }
 }
 
