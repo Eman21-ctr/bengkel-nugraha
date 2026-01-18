@@ -711,9 +711,13 @@ export default function TransactionsPage() {
                                                         <div className="relative z-10">
                                                             <p className="font-black text-gray-900 text-xs leading-tight mb-2 uppercase tracking-wide">{service.name}</p>
                                                             <div className="mt-auto">
-                                                                <p className="text-primary font-black text-base">{formatCurrency(displayPrice)}</p>
-                                                                {customPriceObj && (
-                                                                    <span className="inline-block mt-1 bg-primary text-white text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-tighter">Harga {selectedMember?.vehicle_type}</span>
+                                                                {customPriceObj ? (
+                                                                    <>
+                                                                        <p className="text-primary font-black text-base">{formatCurrency(customPriceObj.price)}</p>
+                                                                        <span className="inline-block mt-1 bg-primary text-white text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-tighter">Harga {selectedMember?.vehicle_type}</span>
+                                                                    </>
+                                                                ) : (
+                                                                    <p className="text-gray-400 font-bold text-[10px] uppercase tracking-widest italic">Pilih Kendaraan</p>
                                                                 )}
                                                             </div>
                                                         </div>
