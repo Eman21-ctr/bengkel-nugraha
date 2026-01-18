@@ -63,15 +63,31 @@ export async function createMember(prevState: any, formData: FormData) {
         return { error: 'Nama dan No HP wajib diisi' }
     }
 
-    // Generate Member Code: MBR + Year + Count
-    const { count } = await supabase
-        .from('members')
-        .select('*', { count: 'exact', head: true })
+    let member_code = formData.get('member_code') as string
 
-    const formattedCode = `MBR${String((count || 0) + 1).padStart(3, '0')}`
+    // If no manual code provided, generate one
+    if (!member_code) {
+        // Generate Member Code: MBR + Year + Count
+        const { count } = await supabase
+            .from('members')
+            .select('*', { count: 'exact', head: true })
+
+        member_code = `MBR${String((count || 0) + 1).padStart(3, '0')}`
+    } else {
+        // Check if manual code is already taken
+        const { data: existing } = await supabase
+            .from('members')
+            .select('id')
+            .eq('member_code', member_code)
+            .single()
+
+        if (existing) {
+            return { error: 'Kode Member / Barcode ini sudah terdaftar oleh member lain.' }
+        }
+    }
 
     // Upload STNK if exists
-    const stnk_photo_url = await uploadSTNK(supabase, stnk_file, formattedCode)
+    const stnk_photo_url = await uploadSTNK(supabase, stnk_file, member_code)
 
     const { error } = await supabase
         .from('members')
@@ -79,7 +95,7 @@ export async function createMember(prevState: any, formData: FormData) {
             name,
             phone,
             vehicle_plate,
-            member_code: formattedCode,
+            member_code: member_code,
             vehicle_type,
             vehicle_size,
             vehicle_model,
@@ -98,7 +114,7 @@ export async function createMember(prevState: any, formData: FormData) {
     }
 
     revalidatePath('/members')
-    return { success: true, member_code: formattedCode }
+    return { success: true, member_code: member_code }
 }
 
 export async function updateMember(prevState: any, formData: FormData) {

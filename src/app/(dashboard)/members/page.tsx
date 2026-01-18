@@ -304,78 +304,14 @@ function MemberModal({ member, storeInfo, onClose, onSuccess }: { member: Member
     const [state, formAction] = useActionState(member ? updateMember : createMember, null)
     const { pending } = useFormStatus()
     const [vehicleType, setVehicleType] = useState(member?.vehicle_type || 'R2')
-    const [showSuccessCard, setShowSuccessCard] = useState(false)
-    const [newMemberCode, setNewMemberCode] = useState('')
 
     useEffect(() => {
         if (state?.success) {
-            const res = state as { success: boolean, member_code?: string }
-            if (!member && res.member_code) {
-                setNewMemberCode(res.member_code)
-                setShowSuccessCard(true)
-            } else {
-                onSuccess()
-            }
+            onSuccess()
         }
-    }, [state, onSuccess, member])
+    }, [state, onSuccess])
 
-    const handlePrintNewCard = () => {
-        const memberData = {
-            name: (document.querySelector('input[name="name"]') as HTMLInputElement)?.value || '',
-            member_code: newMemberCode,
-            phone: (document.querySelector('input[name="phone"]') as HTMLInputElement)?.value || '',
-            join_date: new Date().toISOString()
-        }
-
-        // This is a bit hacky but works for the success modal
-        document.body.classList.add('is-printing-member-card')
-        window.print()
-        document.body.classList.remove('is-printing-member-card')
-    }
-
-    if (showSuccessCard) {
-        return (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm" onClick={onSuccess}></div>
-                <div className="relative transform overflow-hidden rounded-[32px] bg-white p-8 shadow-2xl transition-all w-full max-w-md text-center">
-                    <div className="mb-6">
-                        <div className="mx-auto h-16 w-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-                            <PlusIcon className="h-8 w-8 text-green-600" />
-                        </div>
-                        <h3 className="text-2xl font-black text-gray-900 tracking-tight">MEMBER TERDAFTAR!</h3>
-                        <p className="text-gray-500 text-sm font-bold uppercase tracking-widest mt-1">Kartu member siap dicetak</p>
-                    </div>
-
-                    <div className="flex justify-center mb-8 scale-90 sm:scale-100">
-                        <MemberCard
-                            storeInfo={storeInfo}
-                            member={{
-                                name: (document.querySelector('input[name="name"]') as HTMLInputElement)?.value || 'Member',
-                                member_code: newMemberCode,
-                                phone: (document.querySelector('input[name="phone"]') as HTMLInputElement)?.value || '-',
-                                join_date: new Date().toISOString()
-                            }}
-                        />
-                    </div>
-
-                    <div className="space-y-3">
-                        <button
-                            onClick={handlePrintNewCard}
-                            className="w-full py-4 bg-primary text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-blue-700 shadow-xl shadow-blue-100 transition-all cursor-pointer flex items-center justify-center gap-2"
-                        >
-                            <PrinterIcon className="w-5 h-5" /> CETAK KARTU MEMBER
-                        </button>
-                        <button
-                            onClick={onSuccess}
-                            className="w-full py-4 bg-gray-100 text-gray-500 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-gray-200 transition-all cursor-pointer"
-                        >
-                            SELESAI
-                        </button>
-                    </div>
-                </div>
-            </div>
-        )
-    }
+    // Success popup logic removed as per user request to speed up flow
 
     return (
         <div className="fixed inset-0 z-[100] overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
@@ -429,7 +365,17 @@ function MemberModal({ member, storeInfo, onClose, onSuccess }: { member: Member
                                             <a href={member.stnk_photo_url} target="_blank" rel="noreferrer" className="text-[10px] font-black text-primary underline uppercase tracking-widest whitespace-nowrap">Lihat Foto</a>
                                         )}
                                     </div>
-                                    <input type="hidden" name="member_code" value={member?.member_code || ''} />
+                                    <div className="mt-4">
+                                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Kode / Barcode Member (Opsional)</label>
+                                        <input
+                                            type="text"
+                                            name="member_code"
+                                            defaultValue={member?.member_code || ''}
+                                            className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm font-bold text-gray-900 focus:ring-2 focus:ring-primary transition-all uppercase placeholder:normal-case"
+                                            placeholder="Scan barcode atau ketik manual..."
+                                        />
+                                        <p className="text-[9px] text-gray-400 mt-1 ml-1 font-bold italic">Kosongkan jika ingin sistem membuatkan kode otomatis (MBR...)</p>
+                                    </div>
                                 </div>
                                 <div className="col-span-2 grid grid-cols-3 gap-2">
                                     <label className="col-span-3 block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-0 ml-1">Jenis Kendaraan</label>
