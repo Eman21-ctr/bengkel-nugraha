@@ -19,7 +19,6 @@ import { getMyPermissionsAction } from '@/app/(dashboard)/settings/role-actions'
 const navigation = [
     { name: 'Home', href: '/', icon: HomeIcon, permission: '*' },
     { name: 'Kasir', href: '/transactions', icon: ShoppingCartIcon, permission: 'menu:transactions' },
-    { name: 'Antrean', href: '/queues', icon: ClockIcon, permission: 'menu:queues' },
     { name: 'Stok', href: '/inventory', icon: CubeIcon, permission: 'menu:inventory' },
     { name: 'Setting', href: '/settings', icon: Cog6ToothIcon, permission: 'menu:settings' },
 ]

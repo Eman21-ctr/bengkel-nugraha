@@ -69,8 +69,7 @@ export default function ServicesPage() {
                                     </span>
                                 </div>
                                 <div className="min-w-0 flex-1 px-4">
-                                    <p className="text-sm font-medium text-gray-900">{service.name}</p>
-                                    <p className="text-sm text-primary font-bold">{formatCurrency(service.price)}</p>
+                                    <p className="text-sm font-black text-gray-900 uppercase tracking-tight">{service.name}</p>
                                     {service.description && (
                                         <p className="text-xs text-gray-500 mt-1">{service.description}</p>
                                     )}
@@ -159,15 +158,6 @@ function AddServiceModal({ onClose, onSuccess }: { onClose: () => void; onSucces
                             <input type="text" name="name" required className="input-std" placeholder="Ganti Oli, Servis Ringan, dll" />
                         </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">Harga (Rp)</label>
-                            <input type="number" name="price" required className="input-std" placeholder="50000" />
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">Barcode / Kode (Opsional)</label>
-                            <input type="text" name="barcode" className="input-std" placeholder="Contoh: SER-01" />
-                        </div>
 
                         <div>
                             <label className="block text-sm font-medium text-gray-700">Keterangan (Opsional)</label>
@@ -265,14 +255,6 @@ function EditServiceModal({ service, onClose, onSuccess }: { service: Service; o
                                         <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Nama Jasa</label>
                                         <input type="text" name="name" defaultValue={service.name} required className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm font-bold text-gray-900 focus:ring-2 focus:ring-primary transition-all" />
                                     </div>
-                                    <div>
-                                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Harga Standar (Rp)</label>
-                                        <input type="number" name="price" defaultValue={service.price} required className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm font-bold text-gray-900 focus:ring-2 focus:ring-primary transition-all" />
-                                    </div>
-                                    <div>
-                                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Barcode / Kode</label>
-                                        <input type="text" name="barcode" defaultValue={service.barcode || ''} className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm font-bold text-gray-900 focus:ring-2 focus:ring-primary transition-all" />
-                                    </div>
                                     <div className="col-span-2">
                                         <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Keterangan</label>
                                         <textarea name="description" defaultValue={service.description || ''} rows={2} className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm font-bold text-gray-900 focus:ring-2 focus:ring-primary transition-all"></textarea>
@@ -286,18 +268,13 @@ function EditServiceModal({ service, onClose, onSuccess }: { service: Service; o
                             </form>
                         ) : (
                             <div className="space-y-6">
-                                <div className="bg-blue-50 p-4 rounded-2xl border border-blue-100 mb-6">
-                                    <p className="text-[11px] font-bold text-blue-700 leading-relaxed">
-                                        💡 Atur harga jasa untuk kombinasi tipe & ukuran kendaraan tertentu. Jika tidak diatur, maka sistem akan menggunakan **Harga Standar**.
-                                    </p>
-                                </div>
 
                                 <div className="overflow-hidden border border-gray-100 rounded-2xl shadow-sm">
                                     <table className="min-w-full divide-y divide-gray-100">
                                         <thead className="bg-gray-50">
                                             <tr>
                                                 <th className="px-4 py-3 text-left text-[9px] font-black text-gray-400 uppercase tracking-widest">Tipe & Ukuran</th>
-                                                <th className="px-4 py-3 text-right text-[9px] font-black text-gray-400 uppercase tracking-widest w-40">Harga Khusus (Rp)</th>
+                                                <th className="px-4 py-3 text-right text-[9px] font-black text-gray-400 uppercase tracking-widest w-40">Harga (Rp)</th>
                                             </tr>
                                         </thead>
                                         <tbody className="bg-white divide-y divide-gray-50">

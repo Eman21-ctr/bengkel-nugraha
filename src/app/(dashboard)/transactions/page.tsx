@@ -86,6 +86,10 @@ export default function TransactionsPage() {
     const [selectedQueue, setSelectedQueue] = useState<Queue | null>(null)
     const [showQueueModal, setShowQueueModal] = useState(false)
 
+    // General Customer Vehicle Selection
+    const [selectingVehicleForService, setSelectingVehicleForService] = useState<Service | null>(null)
+    const [vehicleChoice, setVehicleChoice] = useState<{ type: 'R2' | 'R3' | 'R4', size: 'Kecil' | 'Sedang' | 'Besar' | 'Jumbo' }>({ type: 'R2', size: 'Kecil' })
+
     // Load initial data
     useEffect(() => {
         async function initData() {
@@ -158,20 +162,27 @@ export default function TransactionsPage() {
     }
 
     // Add item to cart
-    const addToCart = useCallback((item: Product | Service, type: 'product' | 'service') => {
+    const addToCart = useCallback((item: Product | Service, type: 'product' | 'service', customVehicle?: typeof vehicleChoice) => {
+        const vehicleInfo = customVehicle || (selectedMember ? { type: selectedMember.vehicle_type as any, size: selectedMember.vehicle_size as any } : null)
+
+        if (type === 'service' && !vehicleInfo) {
+            setSelectingVehicleForService(item as Service)
+            return
+        }
+
         setCart(prev => {
             let price = Number(item.price) || 0
 
-            // Apply special pricing for services if member is selected
-            if (type === 'service' && selectedMember) {
+            // Apply special pricing for services
+            if (type === 'service' && vehicleInfo) {
                 const service = item as Service
                 const customPrice = service.prices?.find(p =>
-                    p.vehicle_type === selectedMember.vehicle_type &&
-                    p.vehicle_size === selectedMember.vehicle_size
+                    p.vehicle_type === vehicleInfo.type &&
+                    p.vehicle_size === vehicleInfo.size
                 )
                 if (customPrice) {
                     price = Number(customPrice.price)
-                    console.log(`POS: Applied custom price for ${service.name}: ${price}`)
+                    console.log(`POS: Applied dynamic price for ${service.name}: ${price}`)
                 }
             }
 
@@ -193,6 +204,9 @@ export default function TransactionsPage() {
                 subtotal: price
             }]
         })
+
+        setSelectingVehicleForService(null)
+
         // Auto hide on mobile after add
         if (typeof window !== 'undefined' && window.innerWidth < 1024) {
             setShowMobileItems(false)
@@ -395,6 +409,75 @@ export default function TransactionsPage() {
 
     return (
         <>
+            {/* General Vehicle Selection Modal */}
+            {selectingVehicleForService && (
+                <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+                    <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm" onClick={() => setSelectingVehicleForService(null)}></div>
+                    <div className="relative transform overflow-hidden rounded-[32px] bg-white p-8 shadow-2xl transition-all w-full max-w-sm">
+                        <div className="text-center mb-6">
+                            <div className="mx-auto h-12 w-12 bg-blue-100 rounded-2xl flex items-center justify-center mb-4">
+                                <WrenchScrewdriverIcon className="h-6 w-6 text-primary" />
+                            </div>
+                            <h3 className="text-xl font-black text-gray-900 tracking-tight uppercase italic">{selectingVehicleForService.name}</h3>
+                            <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest mt-1">Pilih jenis & ukuran kendaraan</p>
+                        </div>
+
+                        <div className="space-y-6">
+                            <div>
+                                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3 ml-1">Jenis Kendaraan</label>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {(['R2', 'R3', 'R4'] as const).map(t => (
+                                        <button
+                                            key={t}
+                                            onClick={() => setVehicleChoice(prev => ({ ...prev, type: t }))}
+                                            className={clsx(
+                                                "py-3 rounded-xl text-xs font-black transition-all border-2",
+                                                vehicleChoice.type === t ? "bg-primary border-primary text-white shadow-lg" : "bg-gray-50 border-gray-100 text-gray-400"
+                                            )}
+                                        >
+                                            {t}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3 ml-1">Ukuran</label>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {(['Kecil', 'Sedang', 'Besar', 'Jumbo'] as const).map(s => (
+                                        <button
+                                            key={s}
+                                            onClick={() => setVehicleChoice(prev => ({ ...prev, size: s }))}
+                                            className={clsx(
+                                                "py-3 rounded-xl text-xs font-black transition-all border-2",
+                                                vehicleChoice.size === s ? "bg-primary border-primary text-white shadow-lg" : "bg-gray-50 border-gray-100 text-gray-400"
+                                            )}
+                                        >
+                                            {s}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="pt-2 flex gap-3">
+                                <button
+                                    onClick={() => setSelectingVehicleForService(null)}
+                                    className="flex-1 py-4 bg-gray-100 text-gray-500 rounded-2xl text-[10px] font-black uppercase tracking-widest"
+                                >
+                                    Batal
+                                </button>
+                                <button
+                                    onClick={() => addToCart(selectingVehicleForService, 'service', vehicleChoice)}
+                                    className="flex-[2] py-4 bg-primary text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-blue-100"
+                                >
+                                    Pilih & Tambah
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Quick Queue Modal */}
             <QuickQueueModal
                 isOpen={showQueueModal}

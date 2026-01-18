@@ -67,12 +67,12 @@ export async function createService(prevState: any, formData: FormData) {
     const supabase = await createClient()
 
     const name = formData.get('name') as string
-    const price = Number(formData.get('price'))
     const description = formData.get('description') as string
+    const price = Number(formData.get('price')) || 0
     const barcode = formData.get('barcode') as string || null
 
-    if (!name || isNaN(price)) {
-        return { error: 'Nama dan Harga wajib diisi' }
+    if (!name) {
+        return { error: 'Nama jasa wajib diisi' }
     }
 
     const { error } = await supabase
@@ -121,12 +121,12 @@ export async function updateService(prevState: any, formData: FormData) {
 
     const id = formData.get('id') as string
     const name = formData.get('name') as string
-    const price = Number(formData.get('price'))
+    const price = Number(formData.get('price')) || 0
     const description = formData.get('description') as string
     const barcode = formData.get('barcode') as string || null
 
-    if (!id || !name || isNaN(price)) {
-        return { error: 'ID, Nama dan Harga wajib diisi' }
+    if (!id || !name) {
+        return { error: 'ID dan Nama jasa wajib diisi' }
     }
 
     const { error } = await supabase

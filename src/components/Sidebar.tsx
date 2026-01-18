@@ -25,7 +25,6 @@ const navigation = [
     { name: 'Transaksi', href: '/transactions', icon: ShoppingCartIcon, permission: 'menu:transactions' },
     { name: 'Inventory', href: '/inventory', icon: CubeIcon, permission: 'menu:inventory' },
     { name: 'Jasa', href: '/services', icon: WrenchScrewdriverIcon, permission: 'menu:services' },
-    { name: 'Antrean', href: '/queues', icon: ClockIcon, permission: 'menu:queues' },
     { name: 'Membership', href: '/members', icon: UserGroupIcon, permission: 'menu:members' },
     { name: 'Laporan', href: '/reports', icon: DocumentChartBarIcon, permission: 'menu:reports' },
     { name: 'Pengaturan', href: '/settings', icon: Cog6ToothIcon, permission: 'menu:settings' },
