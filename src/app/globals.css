@@ -51,78 +51,105 @@
 /* Default hide printable components on screen */
 #receipt-print,
 #queue-ticket-print,
-[id^="member-card-"],
+#member-card-print-root,
 .printable-area {
   display: none;
 }
 
 @media print {
-  body * {
-    visibility: hidden;
+
+  /* Set page orientation and margins */
+  @page {
+    margin: 0;
+    size: auto;
   }
 
-  /* Success Modal Isolation Logic */
+  body * {
+    visibility: hidden !important;
+  }
+
+  /* Reset body styles for print */
+  body {
+    background: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    overflow: visible !important;
+  }
+
+  /* Success Modal / Specific Component Isolation Logic */
   body.is-printing-receipt #receipt-print,
   body.is-printing-receipt #receipt-print * {
-    visibility: visible;
+    visibility: visible !important;
   }
 
   body.is-printing-receipt #receipt-print {
     display: block !important;
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 80mm;
+    position: fixed !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 80mm !important;
+    z-index: 99999;
   }
 
   /* Queue Ticket Logic */
   body.is-printing-ticket #queue-ticket-print,
   body.is-printing-ticket #queue-ticket-print * {
-    visibility: visible;
+    visibility: visible !important;
   }
 
   body.is-printing-ticket #queue-ticket-print {
     display: block !important;
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 80mm;
+    position: fixed !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 80mm !important;
+    z-index: 99999;
   }
 
-  /* Member Card Logic */
-  body.is-printing-member-card [id^="member-card-"],
-  body.is-printing-member-card [id^="member-card-"] * {
-    visibility: visible;
+  /* Member Card Logic - Force visibility and position */
+  body.is-printing-member-card #member-card-print-root,
+  body.is-printing-member-card #member-card-print-root * {
+    visibility: visible !important;
   }
 
-  body.is-printing-member-card [id^="member-card-"] {
+  body.is-printing-member-card #member-card-print-root {
     display: flex !important;
-    position: absolute;
-    left: 0;
-    top: 0;
+    position: fixed !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 85.6mm !important;
+    height: 54mm !important;
+    z-index: 99999;
+    padding: 0 !important;
+    margin: 0 !important;
   }
 
   /* Report Logic */
   .printable-area,
   .printable-area * {
-    visibility: visible;
+    visibility: visible !important;
   }
 
   .printable-area {
     display: block !important;
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    background: white;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    background: white !important;
+    z-index: 99999;
   }
 
+  /* Explicitly hide non-printable elements */
   header,
   nav,
   aside,
   footer,
   .print-hidden,
-  .print\:hidden {
+  .print\:hidden,
+  #sidebar,
+  #bottom-nav {
     display: none !important;
   }
 }

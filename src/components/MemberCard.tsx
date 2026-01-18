@@ -20,9 +20,13 @@ interface MemberCardProps {
 export function MemberCard({ storeInfo, member }: MemberCardProps) {
     return (
         <div
-            id={`member-card-${member.member_code}`}
+            id="member-card-print-root"
             className="w-[85.6mm] h-[54mm] bg-gradient-to-br from-primary to-blue-800 text-white p-4 rounded-2xl shadow-xl flex flex-col justify-between overflow-hidden relative font-sans print:shadow-none print:m-0"
-            style={{ printColorAdjust: 'exact', WebkitPrintColorAdjust: 'exact' }}
+            style={{
+                printColorAdjust: 'exact',
+                WebkitPrintColorAdjust: 'exact',
+                colorAdjust: 'exact'
+            }}
         >
             {/* Background Pattern */}
             <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 blur-2xl" />

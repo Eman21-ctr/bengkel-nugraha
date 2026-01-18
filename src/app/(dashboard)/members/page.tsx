@@ -74,14 +74,14 @@ export default function MembersPage() {
 
     const handlePrintCard = (member: Member) => {
         setSelectedMemberForCard(member)
-        // Give time for state to update and barcode to generate
+        // More robust timeout for mobile rendering (barcode generation)
         setTimeout(() => {
             document.body.classList.add('is-printing-member-card')
             window.print()
             setTimeout(() => {
                 document.body.classList.remove('is-printing-member-card')
-            }, 500)
-        }, 500)
+            }, 1000)
+        }, 1000)
     }
 
     return (
