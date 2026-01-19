@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
+import RegisterSW from "@/components/RegisterSW";
 
 const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -19,6 +20,11 @@ export const metadata: Metadata = {
     statusBarStyle: "default",
     title: "Nugraha",
   },
+  other: {
+    "mobile-web-app-capable": "yes",
+    "apple-mobile-web-app-capable": "yes", // Redundant but safe for legacy
+    "application-name": "Nugraha",
+  },
   icons: {
     icon: "/icon-192.png",
     apple: "/apple-icon.png",
@@ -34,17 +40,7 @@ export default function RootLayout({
     <html lang="id">
       <body className={`${jakarta.variable} font-sans antialiased`}>
         {children}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
-                window.addEventListener('load', function() {
-                  navigator.serviceWorker.register('/sw.js');
-                });
-              }
-            `,
-          }}
-        />
+        <RegisterSW />
       </body>
     </html>
   );
