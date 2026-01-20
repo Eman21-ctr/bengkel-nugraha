@@ -298,3 +298,28 @@ export async function getRecentTransactions(limit = 10) {
 
     return data
 }
+
+// Detailed Transactions for History Report
+export async function getDetailedTransactions(period: ReportPeriod, customStart?: string, customEnd?: string) {
+    const supabase = await createClient()
+    const { start, end } = getDateRange(period, customStart, customEnd)
+
+    const { data, error } = await supabase
+        .from('transactions')
+        .select(`
+            *,
+            member:members(id, name, phone, vehicle_plate),
+            cashier:profiles!transactions_user_id_fkey(full_name),
+            items:transaction_items(*)
+        `)
+        .gte('created_at', start.toISOString())
+        .lte('created_at', end.toISOString())
+        .order('created_at', { ascending: false })
+
+    if (error) {
+        console.error('Error fetching detailed transactions:', error)
+        return []
+    }
+
+    return data
+}

@@ -23,6 +23,7 @@ type ReceiptProps = {
             name: string
             points: number
         } | null
+        cashier?: string // New: Cashier name
     }
     showOnScreen?: boolean
 }
@@ -57,6 +58,11 @@ export function Receipt({ storeInfo, transaction, showOnScreen = false }: Receip
                         <span>Pelanggan: {transaction.member.name}</span>
                     </div>
                 )}
+                {transaction.cashier && (
+                    <div className="mt-1">
+                        <span>Kasir: {transaction.cashier}</span>
+                    </div>
+                )}
             </div>
 
             <div className="border-b border-dashed border-black mb-2">
@@ -73,6 +79,9 @@ export function Receipt({ storeInfo, transaction, showOnScreen = false }: Receip
                             <tr key={idx} className="align-top">
                                 <td className="py-1 pr-2">
                                     <span className="block">{item.name}</span>
+                                    {item.employee_id && (
+                                        <span className="block text-[7px] font-bold text-gray-500 italic mt-0.5 uppercase">Petugas: {item.employee_name || '...'}</span>
+                                    )}
                                     <span className="text-[8px] text-gray-500">@ {formatCurrency(item.price)}</span>
                                 </td>
                                 <td className="text-right py-1">{item.qty}</td>

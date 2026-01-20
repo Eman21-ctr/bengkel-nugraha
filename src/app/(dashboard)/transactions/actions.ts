@@ -14,6 +14,7 @@ export type CartItem = {
     cost_price: number
     qty: number
     subtotal: number
+    employee_id?: string // New: for mechanic/operator tracking
 }
 
 export type TransactionPayload = {
@@ -159,7 +160,8 @@ export async function processTransaction(payload: TransactionPayload) {
             item_name: item.name,
             qty: item.qty,
             price: item.price,
-            subtotal: item.subtotal
+            subtotal: item.subtotal,
+            performed_by: item.employee_id || null // Link the employee
         }))
 
         const { error: itemsError } = await supabase
@@ -318,4 +320,20 @@ export async function getItemByBarcode(barcode: string) {
     }
 
     return null
+}
+
+// Fetch employees for dropdowns
+export async function getEmployees() {
+    const supabase = await createClient()
+    const { data, error } = await supabase
+        .from('employees')
+        .select('*')
+        .eq('is_active', true)
+        .order('name')
+
+    if (error) {
+        console.error('Error fetching employees:', error)
+        return []
+    }
+    return data
 }

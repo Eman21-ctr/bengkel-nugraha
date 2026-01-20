@@ -51,8 +51,7 @@
 /* Default hide printable components on screen */
 #receipt-print,
 #queue-ticket-print,
-#member-card-print-root,
-.printable-area {
+#member-card-print-root {
   display: none;
 }
 

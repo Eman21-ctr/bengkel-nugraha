@@ -8,8 +8,12 @@ import {
     WrenchScrewdriverIcon,
     ExclamationTriangleIcon,
     CubeIcon,
-    UserIcon
+    UserIcon,
+    EyeIcon,
+    PrinterIcon,
+    XMarkIcon
 } from '@heroicons/react/24/outline'
+import { Receipt } from '@/components/Receipt'
 import {
     getSalesSummary,
     getTopProducts,
@@ -18,11 +22,13 @@ import {
     getCategorySalesDetail,
     getStockMovements,
     getMemberReport,
+    getDetailedTransactions,
     type ReportPeriod
 } from './actions'
+import { getStoreProfile } from '../settings/actions'
 import clsx from 'clsx'
 
-type ReportType = 'sales' | 'items' | 'stock' | 'member'
+type ReportType = 'sales' | 'items' | 'stock' | 'member' | 'transactions'
 
 export default function ReportsPage() {
     const [reportType, setReportType] = useState<ReportType>('sales')
@@ -44,6 +50,9 @@ export default function ReportsPage() {
     const [lowStock, setLowStock] = useState<{ id: string; name: string; stock: number; min_stock: number; unit: string }[]>([])
     const [stockMovements, setStockMovements] = useState<any[]>([])
     const [memberData, setMemberData] = useState<any>(null)
+    const [transactions, setTransactions] = useState<any[]>([])
+    const [selectedTransaction, setSelectedTransaction] = useState<any>(null)
+    const [storeProfile, setStoreProfile] = useState({ name: '', address: '', phone: '' })
 
     const [isPending, startTransition] = useTransition()
 
@@ -73,16 +82,32 @@ export default function ReportsPage() {
             } else if (reportType === 'member') {
                 const data = await getMemberReport()
                 setMemberData(data)
+            } else if (reportType === 'transactions') {
+                const data = await getDetailedTransactions(period, customStart, customEnd)
+                setTransactions(data)
             }
         })
     }
 
     useEffect(() => {
+        async function init() {
+            const profile = await getStoreProfile()
+            if (profile) setStoreProfile(profile)
+        }
+        init()
         loadData()
-    }, [reportType]) // Reload when type changes
+    }, [reportType, period, customStart, customEnd]) // Added period/dates for reactivity
 
     const formatCurrency = (amount: number) =>
         new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount)
+
+    const handlePrintReceipt = () => {
+        document.body.classList.add('is-printing-receipt')
+        window.print()
+        setTimeout(() => {
+            document.body.classList.remove('is-printing-receipt')
+        }, 500)
+    }
 
     const periodOptions: { value: ReportPeriod; label: string }[] = [
         { value: 'today', label: 'Hari Ini' },
@@ -93,6 +118,7 @@ export default function ReportsPage() {
 
     const reportOptions: { value: ReportType; label: string }[] = [
         { value: 'sales', label: 'Laporan Penjualan' },
+        { value: 'transactions', label: 'Laporan Transaksi' },
         { value: 'items', label: 'Laporan Per Item' },
         { value: 'stock', label: 'Laporan Stok' },
         { value: 'member', label: 'Laporan Member' }
@@ -111,7 +137,7 @@ export default function ReportsPage() {
                         <button
                             onClick={loadData}
                             disabled={isPending}
-                            className="px-6 py-2 bg-secondary text-white font-bold rounded-lg hover:bg-green-600 disabled:opacity-50 transition-colors cursor-pointer"
+                            className="px-6 py-2 bg-primary text-white font-bold rounded-lg hover:bg-primary-hover disabled:opacity-50 transition-colors cursor-pointer"
                         >
                             {isPending ? 'Memuat...' : 'Tampilkan'}
                         </button>
@@ -423,7 +449,155 @@ export default function ReportsPage() {
                         </div>
                     </div>
                 )}
+
+                {reportType === 'transactions' && (
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                        <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                            <h3 className="font-bold text-gray-800">Riwayat Transaksi Lengkap</h3>
+                            <span className="text-xs font-bold text-primary bg-primary/10 px-3 py-1 rounded-full">{transactions.length} Transaksi</span>
+                        </div>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <thead className="bg-gray-50 text-gray-500 uppercase text-[10px] font-bold">
+                                    <tr>
+                                        <th className="px-6 py-4 text-left">Waktu</th>
+                                        <th className="px-6 py-4 text-left">No. Struk</th>
+                                        <th className="px-6 py-4 text-left">Pelanggan</th>
+                                        <th className="px-6 py-4 text-left">Kasir</th>
+                                        <th className="px-6 py-4 text-center">Tipe</th>
+                                        <th className="px-6 py-4 text-right">Total</th>
+                                        <th className="px-6 py-4 text-center">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100 font-medium">
+                                    {transactions.map(tx => (
+                                        <tr key={tx.id} className="hover:bg-blue-50/30 transition-colors group">
+                                            <td className="px-6 py-4 text-gray-400 text-xs">
+                                                {new Date(tx.created_at).toLocaleString('id-ID', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                                            </td>
+                                            <td className="px-6 py-4 font-mono font-black text-gray-900">{tx.invoice_number}</td>
+                                            <td className="px-6 py-4">
+                                                <p className="text-gray-900">{tx.member?.name || '-'}</p>
+                                                {tx.member?.vehicle_plate && <p className="text-[10px] text-gray-400 font-bold uppercase">{tx.member.vehicle_plate}</p>}
+                                            </td>
+                                            <td className="px-6 py-4 text-gray-500 italic">{tx.cashier?.full_name || '-'}</td>
+                                            <td className="px-6 py-4 text-center">
+                                                <span className={clsx("px-2 py-1 rounded text-[10px] uppercase font-black", tx.type === 'bengkel' ? 'bg-orange-100 text-orange-600' : 'bg-blue-100 text-blue-600')}>
+                                                    {tx.type}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 text-right font-black text-gray-900">{formatCurrency(tx.final_amount)}</td>
+                                            <td className="px-6 py-4 text-center">
+                                                <button
+                                                    onClick={() => setSelectedTransaction(tx)}
+                                                    className="p-2 text-primary hover:bg-primary/10 rounded-lg transition-all"
+                                                    title="Lihat Detail & Cetak"
+                                                >
+                                                    <EyeIcon className="w-5 h-5" />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {transactions.length === 0 && (
+                                        <tr>
+                                            <td colSpan={7} className="py-20 text-center text-gray-400 font-bold uppercase tracking-widest bg-gray-50/30">
+                                                Tidak Ada Data Transaksi
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
             </div>
+
+            {/* Receipt Modal */}
+            {selectedTransaction && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/80 backdrop-blur-sm p-4 overflow-y-auto">
+                    <div className="bg-white rounded-[2rem] p-6 max-w-lg w-full animate-bounce-in shadow-2xl my-auto relative">
+                        <button
+                            onClick={() => setSelectedTransaction(null)}
+                            className="absolute top-6 right-6 p-2 hover:bg-gray-100 rounded-full transition-all"
+                        >
+                            <XMarkIcon className="w-6 h-6 text-gray-400" />
+                        </button>
+
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
+                                <ShoppingCartIcon className="w-6 h-6 text-primary" />
+                            </div>
+                            <div className="text-left">
+                                <h2 className="text-xl font-black text-gray-900 leading-none italic uppercase tracking-tighter">DETAIL TRANSAKSI</h2>
+                                <p className="text-gray-400 text-[8px] font-black uppercase tracking-widest">{selectedTransaction.invoice_number}</p>
+                            </div>
+                        </div>
+
+                        <div className="mb-6 bg-gray-50 p-2 rounded-2xl border-2 border-dashed border-gray-200">
+                            <Receipt
+                                showOnScreen={true}
+                                storeInfo={storeProfile}
+                                transaction={{
+                                    invoice: selectedTransaction.invoice_number,
+                                    date: new Date(selectedTransaction.created_at),
+                                    type: selectedTransaction.type,
+                                    items: selectedTransaction.items.map((it: any) => ({
+                                        ...it,
+                                        name: it.item_name,
+                                        price: Number(it.price),
+                                        qty: it.qty,
+                                        subtotal: Number(it.subtotal)
+                                    })),
+                                    subtotal: Number(selectedTransaction.final_amount) + Number(selectedTransaction.discount_amount),
+                                    discount: Number(selectedTransaction.discount_amount),
+                                    total: Number(selectedTransaction.final_amount),
+                                    paymentMethod: selectedTransaction.payment_method,
+                                    paymentAmount: Number(selectedTransaction.final_amount), // Simplified for re-print
+                                    change: 0,
+                                    member: selectedTransaction.member,
+                                    cashier: selectedTransaction.cashier?.full_name
+                                }}
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-3">
+                            <button
+                                onClick={handlePrintReceipt}
+                                className="flex items-center justify-center gap-2 py-4 bg-primary text-white font-black text-xs uppercase tracking-widest rounded-3xl hover:bg-primary/90 transition-all cursor-pointer shadow-lg shadow-primary/20"
+                            >
+                                <PrinterIcon className="w-5 h-5" /> CETAK ULANG STRUK
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Hidden Receipt for Printing History */}
+            {selectedTransaction && (
+                <Receipt
+                    storeInfo={storeProfile}
+                    transaction={{
+                        invoice: selectedTransaction.invoice_number,
+                        date: new Date(selectedTransaction.created_at),
+                        type: selectedTransaction.type,
+                        items: selectedTransaction.items.map((it: any) => ({
+                            ...it,
+                            name: it.item_name,
+                            price: Number(it.price),
+                            qty: it.qty,
+                            subtotal: Number(it.subtotal)
+                        })),
+                        subtotal: Number(selectedTransaction.final_amount) + Number(selectedTransaction.discount_amount),
+                        discount: Number(selectedTransaction.discount_amount),
+                        total: Number(selectedTransaction.final_amount),
+                        paymentMethod: selectedTransaction.payment_method,
+                        paymentAmount: Number(selectedTransaction.final_amount),
+                        change: 0,
+                        member: selectedTransaction.member,
+                        cashier: selectedTransaction.cashier?.full_name
+                    }}
+                />
+            )}
 
             {/* Print Only Footer */}
             <div className="hidden print:block fixed bottom-0 left-0 right-0 text-[10px] text-gray-400 text-center pb-4">

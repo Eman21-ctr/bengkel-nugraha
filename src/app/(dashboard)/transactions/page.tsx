@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useTransition, useCallback, useActionState } from 'react'
+import { createClient } from '@/utils/supabase/client'
 import {
     ShoppingCartIcon,
     WrenchScrewdriverIcon,
@@ -13,7 +14,9 @@ import {
     CheckCircleIcon,
     BanknotesIcon,
     QrCodeIcon,
-    PencilIcon
+    PrinterIcon,
+    PencilIcon,
+    CameraIcon
 } from '@heroicons/react/24/outline'
 import {
     getProductsForPOS,
@@ -24,7 +27,8 @@ import {
     getMemberById,
     type CartItem,
     type TransactionType,
-    type TransactionPayload
+    type TransactionPayload,
+    getEmployees
 } from './actions'
 import { getEligibleReward, claimReward } from '../settings/loyalty-actions'
 import { getCategories, updateProduct, type Category } from '../inventory/actions'
@@ -32,7 +36,6 @@ import { updateService } from '../services/actions'
 import { getStoreProfile } from '../settings/actions'
 import { Receipt } from '@/components/Receipt'
 import clsx from 'clsx'
-import { PrinterIcon, CameraIcon } from '@heroicons/react/24/outline'
 import { Html5QrcodeScanner } from 'html5-qrcode'
 import { getItemByBarcode } from './actions'
 import QueueSidebar from '@/components/QueueSidebar'
@@ -59,6 +62,9 @@ export default function TransactionsPage() {
     // Edit states
     const [editingProduct, setEditingProduct] = useState<Product | null>(null)
     const [editingService, setEditingService] = useState<Service | null>(null)
+    const [employees, setEmployees] = useState<any[]>([])
+    const [activeEmployeeId, setActiveEmployeeId] = useState<string>('')
+    const [userProfile, setUserProfile] = useState<any>(null)
 
     // Cart
     const [cart, setCart] = useState<CartItem[]>([])
@@ -111,6 +117,13 @@ export default function TransactionsPage() {
                 })
                 setStoreProfile(profile)
                 setCategories(catData || [])
+                const empData = await getEmployees()
+                setEmployees(empData || [])
+                const { data: { user } } = await createClient().auth.getUser()
+                if (user) {
+                    const { data: profile } = await createClient().from('profiles').select('full_name').eq('id', user.id).single()
+                    setUserProfile(profile)
+                }
             } catch (err) {
                 console.error('POS: Initial load error', err)
             }
@@ -170,6 +183,9 @@ export default function TransactionsPage() {
             return
         }
 
+        // If it's a service, maybe we want to auto-assign current active employee if selected
+        const employee_id = (type === 'service') ? activeEmployeeId : undefined
+
         setCart(prev => {
             let price = Number(item.price) || 0
 
@@ -201,7 +217,8 @@ export default function TransactionsPage() {
                 price: price,
                 cost_price: Number('cost_price' in item ? item.cost_price : 0) || 0,
                 qty: 1,
-                subtotal: price
+                subtotal: price,
+                employee_id: employee_id
             }]
         })
 
@@ -485,6 +502,7 @@ export default function TransactionsPage() {
                 onSuccess={handleQueueCreated}
             />
 
+            {/* Employee/Mechanic Quick Select Overlay for Services in Cart */}
             <div className="flex flex-col lg:flex-row gap-6 lg:h-[calc(100vh-8rem)]">
                 <div className="flex flex-col lg:flex-row gap-6 lg:h-[calc(100vh-8rem)] flex-1 print:hidden">
                     {/* Queue Sidebar - Desktop Only */}
@@ -794,6 +812,26 @@ export default function TransactionsPage() {
                                         <li key={`${item.type}-${item.id}`} className="flex items-center gap-2 p-2 bg-gray-50/50 border border-gray-100 rounded-xl group transition-all hover:bg-white hover:shadow-md hover:shadow-gray-100">
                                             <div className="flex-1 min-w-0">
                                                 <p className="font-black text-gray-900 text-[10px] uppercase tracking-wide truncate leading-tight">{item.name}</p>
+                                                {item.type === 'service' && (
+                                                    <div className="mt-1 flex items-center gap-1">
+                                                        <span className="text-[8px] font-black text-gray-400">PETUGAS:</span>
+                                                        <select
+                                                            value={item.employee_id || ''}
+                                                            onChange={(e) => {
+                                                                const empId = e.target.value;
+                                                                setCart(prev => prev.map(c =>
+                                                                    (c.id === item.id && c.type === 'service') ? { ...c, employee_id: empId } : c
+                                                                ));
+                                                            }}
+                                                            className="bg-transparent border-none text-[8px] font-black text-primary p-0 m-0 outline-none cursor-pointer uppercase"
+                                                        >
+                                                            <option value="">Pilih...</option>
+                                                            {employees.map(emp => (
+                                                                <option key={emp.id} value={emp.id}>{emp.name}</option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                )}
                                                 <p className="text-[9px] font-bold text-primary mt-0.5">{formatCurrency(item.price)}</p>
                                             </div>
                                             <div className="flex items-center gap-2">
@@ -940,14 +978,18 @@ export default function TransactionsPage() {
                                     invoice: invoiceNumber,
                                     date: new Date(),
                                     type: txType,
-                                    items: cart,
+                                    items: cart.map(item => ({
+                                        ...item,
+                                        employee_name: employees.find(e => e.id === item.employee_id)?.name
+                                    })),
                                     subtotal: cleanSubtotal,
                                     discount: pointDiscount,
                                     total: finalTotal,
                                     paymentMethod,
                                     paymentAmount,
                                     change: cleanChange,
-                                    member: selectedMember
+                                    member: selectedMember,
+                                    cashier: userProfile?.full_name || 'Admin'
                                 }}
                             />
                         </div>
@@ -977,14 +1019,18 @@ export default function TransactionsPage() {
                     invoice: invoiceNumber,
                     date: new Date(),
                     type: txType,
-                    items: cart,
+                    items: cart.map(item => ({
+                        ...item,
+                        employee_name: employees.find(e => e.id === item.employee_id)?.name
+                    })),
                     subtotal: cleanSubtotal,
                     discount: pointDiscount,
                     total: finalTotal,
                     paymentMethod,
                     paymentAmount,
                     change: cleanChange,
-                    member: selectedMember
+                    member: selectedMember,
+                    cashier: userProfile?.full_name || 'Admin'
                 }}
             />
 

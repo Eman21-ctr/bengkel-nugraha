@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useTransition, useCallback } from 'react'
-import { Cog6ToothIcon, BuildingStorefrontIcon, GiftIcon, UserCircleIcon, ArrowRightOnRectangleIcon, UserGroupIcon } from '@heroicons/react/24/outline'
+import { Cog6ToothIcon, BuildingStorefrontIcon, GiftIcon, UserCircleIcon, ArrowRightOnRectangleIcon, UserGroupIcon, PlusIcon } from '@heroicons/react/24/outline'
 import { getStoreProfile, updateStoreProfile, getPointConfig, updatePointConfig, getCurrentUser, logout } from './actions'
 import { useActionState } from 'react'
 import { useFormStatus } from 'react-dom'
@@ -14,7 +14,7 @@ import { getUsers, updateUserRole, createUser, toggleUserStatus, ensureAdminIsOw
 import { ShieldCheckIcon, CheckIcon, UserPlusIcon, XMarkIcon, PencilSquareIcon, KeyIcon } from '@heroicons/react/24/outline'
 import { updateMyProfile, updateMyPassword } from './my-account-actions'
 
-type Tab = 'profile' | 'loyalty' | 'roles' | 'users' | 'account'
+type Tab = 'profile' | 'loyalty' | 'roles' | 'users' | 'employees' | 'account'
 
 export default function SettingsPage() {
     const [activeTab, setActiveTab] = useState<Tab>('profile')
@@ -57,7 +57,8 @@ export default function SettingsPage() {
     const tabs: { id: Tab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
         { id: 'profile', label: 'Profil Usaha', icon: BuildingStorefrontIcon },
         { id: 'loyalty', label: 'Loyalitas & Poin', icon: GiftIcon },
-        { id: 'users', label: 'Pengguna', icon: UserGroupIcon },
+        { id: 'users', label: 'Pengguna (Login)', icon: UserGroupIcon },
+        { id: 'employees', label: 'Karyawan', icon: UserGroupIcon }, // Use same or different icon
         { id: 'roles', label: 'Peran & Akses', icon: ShieldCheckIcon },
         { id: 'account', label: 'Akun Saya', icon: UserCircleIcon }
     ]
@@ -115,6 +116,9 @@ export default function SettingsPage() {
                 )}
                 {activeTab === 'users' && (
                     <UserManagement users={usersList} roles={roles} onUpdate={fetchData} />
+                )}
+                {activeTab === 'employees' && (
+                    <EmployeeManagement onUpdate={fetchData} />
                 )}
                 {activeTab === 'roles' && (
                     <RoleManagement roles={roles} allPermissions={allPermissions} onUpdate={fetchData} />
@@ -625,6 +629,140 @@ function AddUserModal({ roles, onClose, onSuccess }: { roles: Role[]; onClose: (
 
                     <div className="pt-4">
                         <SubmitButton label="Buat Akun Karyawan" />
+                    </div>
+                </form>
+            </div>
+        </div>
+    )
+}
+
+// --- NEW COMPONENT: EMPLOYEE MANAGEMENT ---
+import { createEmployee, toggleEmployeeStatus, getEmployees as getAllEmployeesDB } from './employee-actions'
+
+function EmployeeManagement({ onUpdate }: { onUpdate: () => void }) {
+    const [employees, setEmployees] = useState<any[]>([])
+    const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+    const [isPending, setIsPending] = useState(false)
+
+    useEffect(() => {
+        const fetchEmployees = async () => {
+            const data = await getAllEmployeesDB()
+            setEmployees(data)
+        }
+        fetchEmployees()
+    }, [])
+
+    const handleToggle = async (id: string, current: boolean) => {
+        if (!confirm(current ? 'Nonaktifkan karyawan ini?' : 'Aktifkan kembali?')) return
+        await toggleEmployeeStatus(id, current)
+        const data = await getAllEmployeesDB()
+        setEmployees(data)
+        onUpdate()
+    }
+
+    return (
+        <div>
+            <div className="flex justify-between items-center mb-6">
+                <div>
+                    <h3 className="text-lg font-bold text-gray-900">Daftar Karyawan</h3>
+                    <p className="text-sm text-gray-500">Data Mekanik, Operator, dan Kasir untuk pelacakan transaksi.</p>
+                </div>
+                <button
+                    onClick={() => setIsAddModalOpen(true)}
+                    className="flex items-center gap-2 px-4 py-2 bg-primary text-white text-xs font-bold uppercase tracking-widest rounded-lg hover:bg-primary-hover shadow-sm transition-all cursor-pointer"
+                >
+                    <PlusIcon className="w-4 h-4" />
+                    Tambah Karyawan
+                </button>
+            </div>
+
+            {isAddModalOpen && (
+                <AddEmployeeModal
+                    onClose={() => setIsAddModalOpen(false)}
+                    onSuccess={async () => {
+                        setIsAddModalOpen(false);
+                        const data = await getAllEmployeesDB();
+                        setEmployees(data);
+                        onUpdate();
+                    }}
+                />
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {employees.map(emp => (
+                    <div key={emp.id} className={clsx(
+                        "p-5 rounded-2xl border transition-all flex items-center justify-between",
+                        emp.is_active ? "bg-white border-gray-100 shadow-sm" : "bg-gray-50 border-gray-100 opacity-60"
+                    )}>
+                        <div className="flex items-center gap-4">
+                            <div className={clsx(
+                                "w-10 h-10 rounded-xl flex items-center justify-center text-lg",
+                                emp.position === 'Mekanik' ? "bg-orange-100" :
+                                    emp.position === 'Operator' ? "bg-blue-100" : "bg-green-100"
+                            )}>
+                                {emp.position === 'Mekanik' ? '🔧' : emp.position === 'Operator' ? '🧽' : '💰'}
+                            </div>
+                            <div>
+                                <p className="font-black text-gray-900 uppercase tracking-tight leading-none">{emp.name}</p>
+                                <p className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-widest">{emp.position}</p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => handleToggle(emp.id, emp.is_active)}
+                            className={clsx(
+                                "px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border transition-all cursor-pointer",
+                                emp.is_active ? "border-green-200 text-green-600 bg-green-50" : "border-gray-200 text-gray-400 bg-gray-100"
+                            )}
+                        >
+                            {emp.is_active ? 'Aktif' : 'Off'}
+                        </button>
+                    </div>
+                ))}
+            </div>
+        </div>
+    )
+}
+
+function AddEmployeeModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
+    const [state, formAction] = useActionState(createEmployee, null)
+
+    useEffect(() => {
+        if (state?.success) {
+            alert('Karyawan berhasil ditambahkan!')
+            onSuccess()
+        }
+    }, [state, onSuccess])
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+                <div className="flex justify-between items-center p-4 border-b border-gray-100">
+                    <h3 className="font-bold text-gray-900 uppercase italic">Tambah Karyawan Baru</h3>
+                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors cursor-pointer">
+                        <XMarkIcon className="w-6 h-6" />
+                    </button>
+                </div>
+
+                <form action={formAction} className="p-6 space-y-5">
+                    {state?.error && <div className="p-3 bg-red-50 text-red-600 text-[10px] font-black uppercase rounded-xl border border-red-100">{state.error}</div>}
+
+                    <div>
+                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Nama Lengkap</label>
+                        <input type="text" name="name" required className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm font-bold text-gray-900 focus:ring-2 focus:ring-primary transition-all" placeholder="Nama karyawan..." />
+                    </div>
+
+                    <div>
+                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Posisi / Jabatan</label>
+                        <select name="position" required className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm font-bold text-gray-900 focus:ring-2 focus:ring-primary transition-all">
+                            <option value="Mekanik">Mekanik (Servis)</option>
+                            <option value="Operator">Operator (Cuci/Lainnya)</option>
+                            <option value="Kasir">Kasir</option>
+                            <option value="Admin">Admin</option>
+                        </select>
+                    </div>
+
+                    <div className="pt-2">
+                        <SubmitButton label="Simpan Karyawan" />
                     </div>
                 </form>
             </div>
