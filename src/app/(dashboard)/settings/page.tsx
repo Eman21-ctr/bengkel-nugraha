@@ -637,11 +637,12 @@ function AddUserModal({ roles, onClose, onSuccess }: { roles: Role[]; onClose: (
 }
 
 // --- NEW COMPONENT: EMPLOYEE MANAGEMENT ---
-import { createEmployee, toggleEmployeeStatus, getEmployees as getAllEmployeesDB } from './employee-actions'
+import { createEmployee, updateEmployee as updateEmployeeDB, toggleEmployeeStatus, getEmployees as getAllEmployeesDB } from './employee-actions'
 
 function EmployeeManagement({ onUpdate }: { onUpdate: () => void }) {
     const [employees, setEmployees] = useState<any[]>([])
     const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+    const [editingEmployee, setEditingEmployee] = useState<any | null>(null)
     const [isPending, setIsPending] = useState(false)
 
     useEffect(() => {
@@ -688,6 +689,19 @@ function EmployeeManagement({ onUpdate }: { onUpdate: () => void }) {
                 />
             )}
 
+            {editingEmployee && (
+                <EditEmployeeModal
+                    employee={editingEmployee}
+                    onClose={() => setEditingEmployee(null)}
+                    onSuccess={async () => {
+                        setEditingEmployee(null);
+                        const data = await getAllEmployeesDB();
+                        setEmployees(data);
+                        onUpdate();
+                    }}
+                />
+            )}
+
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {employees.map(emp => (
                     <div key={emp.id} className={clsx(
@@ -707,15 +721,24 @@ function EmployeeManagement({ onUpdate }: { onUpdate: () => void }) {
                                 <p className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-widest">{emp.position}</p>
                             </div>
                         </div>
-                        <button
-                            onClick={() => handleToggle(emp.id, emp.is_active)}
-                            className={clsx(
-                                "px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border transition-all cursor-pointer",
-                                emp.is_active ? "border-green-200 text-green-600 bg-green-50" : "border-gray-200 text-gray-400 bg-gray-100"
-                            )}
-                        >
-                            {emp.is_active ? 'Aktif' : 'Off'}
-                        </button>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => setEditingEmployee(emp)}
+                                className="p-2 text-gray-400 hover:text-primary hover:bg-primary/5 rounded-xl transition-all cursor-pointer"
+                                title="Edit Karyawan"
+                            >
+                                <PencilSquareIcon className="w-4 h-4" />
+                            </button>
+                            <button
+                                onClick={() => handleToggle(emp.id, emp.is_active)}
+                                className={clsx(
+                                    "px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border transition-all cursor-pointer",
+                                    emp.is_active ? "border-green-200 text-green-600 bg-green-50" : "border-gray-200 text-gray-400 bg-gray-100"
+                                )}
+                            >
+                                {emp.is_active ? 'Aktif' : 'Off'}
+                            </button>
+                        </div>
                     </div>
                 ))}
             </div>
@@ -763,6 +786,89 @@ function AddEmployeeModal({ onClose, onSuccess }: { onClose: () => void; onSucce
 
                     <div className="pt-2">
                         <SubmitButton label="Simpan Karyawan" />
+                    </div>
+                </form>
+            </div>
+        </div>
+    )
+}
+
+function EditEmployeeModal({ employee, onClose, onSuccess }: { employee: any; onClose: () => void; onSuccess: () => void }) {
+    const [isPending, setIsPending] = useState(false)
+    const [error, setError] = useState<string | null>(null)
+
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault()
+        setIsPending(true)
+        setError(null)
+
+        const formData = new FormData(e.currentTarget)
+        const name = formData.get('name') as string
+        const position = formData.get('position') as string
+
+        try {
+            const result = await updateEmployeeDB(employee.id, name, position)
+            if (result.success) {
+                alert('Data karyawan berhasil diupdate!')
+                onSuccess()
+            } else {
+                setError(result.error || 'Terjadi kesalahan')
+            }
+        } catch (err: any) {
+            setError(err.message || 'Terjadi kesalahan')
+        } finally {
+            setIsPending(false)
+        }
+    }
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+                <div className="flex justify-between items-center p-4 border-b border-gray-100">
+                    <h3 className="font-bold text-gray-900 uppercase italic">Edit Data Karyawan</h3>
+                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors cursor-pointer">
+                        <XMarkIcon className="w-6 h-6" />
+                    </button>
+                </div>
+
+                <form onSubmit={handleSubmit} className="p-6 space-y-5">
+                    {error && <div className="p-3 bg-red-50 text-red-600 text-[10px] font-black uppercase rounded-xl border border-red-100">{error}</div>}
+
+                    <div>
+                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Nama Lengkap</label>
+                        <input
+                            type="text"
+                            name="name"
+                            required
+                            defaultValue={employee.name}
+                            className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm font-bold text-gray-900 focus:ring-2 focus:ring-primary transition-all"
+                            placeholder="Nama karyawan..."
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Posisi / Jabatan</label>
+                        <select
+                            name="position"
+                            required
+                            defaultValue={employee.position}
+                            className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm font-bold text-gray-900 focus:ring-2 focus:ring-primary transition-all"
+                        >
+                            <option value="Mekanik">Mekanik (Servis)</option>
+                            <option value="Operator">Operator (Cuci/Lainnya)</option>
+                            <option value="Kasir">Kasir</option>
+                            <option value="Admin">Admin</option>
+                        </select>
+                    </div>
+
+                    <div className="pt-2">
+                        <button
+                            type="submit"
+                            disabled={isPending}
+                            className="w-full py-4 bg-primary text-white font-black text-[11px] uppercase tracking-[0.2em] rounded-2xl hover:bg-primary-hover shadow-lg shadow-primary/20 transition-all disabled:opacity-50 disabled:shadow-none"
+                        >
+                            {isPending ? 'MENYIMPAN...' : 'UPDATE DATA KARYAWAN'}
+                        </button>
                     </div>
                 </form>
             </div>
