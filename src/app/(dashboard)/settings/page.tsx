@@ -777,8 +777,8 @@ function AddEmployeeModal({ onClose, onSuccess }: { onClose: () => void; onSucce
                     <div>
                         <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Posisi / Jabatan</label>
                         <select name="position" required className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm font-bold text-gray-900 focus:ring-2 focus:ring-primary transition-all">
-                            <option value="Mekanik">Mekanik (Servis)</option>
-                            <option value="Operator">Operator (Cuci/Lainnya)</option>
+                            <option value="Mekanik">Mekanik</option>
+                            <option value="Operator">Operator</option>
                             <option value="Kasir">Kasir</option>
                             <option value="Admin">Admin</option>
                         </select>
@@ -854,8 +854,8 @@ function EditEmployeeModal({ employee, onClose, onSuccess }: { employee: any; on
                             defaultValue={employee.position}
                             className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm font-bold text-gray-900 focus:ring-2 focus:ring-primary transition-all"
                         >
-                            <option value="Mekanik">Mekanik (Servis)</option>
-                            <option value="Operator">Operator (Cuci/Lainnya)</option>
+                            <option value="Mekanik">Mekanik</option>
+                            <option value="Operator">Operator</option>
                             <option value="Kasir">Kasir</option>
                             <option value="Admin">Admin</option>
                         </select>
