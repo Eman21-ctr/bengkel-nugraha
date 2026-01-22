@@ -51,7 +51,7 @@ export function Receipt({ storeInfo, transaction, showOnScreen = false }: Receip
                     <span>{new Date(transaction.date).toLocaleDateString('id-ID')}</span>
                 </div>
                 <div className="flex justify-between">
-                    <span>Tipe: {transaction.type.toUpperCase()}</span>
+                    <span>{showOnScreen ? `Tipe: ${transaction.type.toUpperCase()}` : ''}</span>
                     <span>{new Date(transaction.date).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
                 {transaction.member && (
@@ -118,7 +118,7 @@ export function Receipt({ storeInfo, transaction, showOnScreen = false }: Receip
                 </div>
             </div>
 
-            {transaction.member && (
+            {transaction.member && showOnScreen && (
                 <div className="text-[9px] border-t border-b border-dashed border-black py-1 mb-2 text-center">
                     <p>Total Poin: {transaction.member.points}</p>
                 </div>
@@ -129,11 +129,6 @@ export function Receipt({ storeInfo, transaction, showOnScreen = false }: Receip
                     <p>"{transaction.note}"</p>
                 </div>
             )}
-
-            <div className="text-center text-[9px] mt-4 leading-tight opacity-70">
-                <p>Terima Kasih Atas Kunjungan Anda</p>
-                <p>Barang/Jasa yang sudah dibeli tidak dapat ditukar</p>
-            </div>
         </div>
     )
 }
