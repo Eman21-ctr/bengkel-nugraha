@@ -78,7 +78,8 @@ export default function TransactionsPage() {
 
     // Payment
     const [paymentMethod, setPaymentMethod] = useState<'cash' | 'qris'>('cash')
-    const [paymentAmount, setPaymentAmount] = useState(0)
+    const [paymentAmount, setPaymentAmount] = useState<number>(0)
+    const [receiptNote, setReceiptNote] = useState<string>('')
     const [showSuccess, setShowSuccess] = useState(false)
     const [invoiceNumber, setInvoiceNumber] = useState('')
 
@@ -389,7 +390,8 @@ export default function TransactionsPage() {
             total: finalTotal,
             payment_method: paymentMethod,
             payment_amount: paymentAmount,
-            queue_id: selectedQueue?.id
+            queue_id: selectedQueue?.id,
+            note: receiptNote
         }
 
         const result = await processTransaction(payload)
@@ -414,6 +416,7 @@ export default function TransactionsPage() {
         setPaymentAmount(0)
         setShowSuccess(false)
         setInvoiceNumber('')
+        setReceiptNote('')
     }
 
     const filteredServices = services.filter(s =>
@@ -932,7 +935,17 @@ export default function TransactionsPage() {
                                         value={paymentAmount || ''}
                                         onChange={(e) => setPaymentAmount(Number(e.target.value))}
                                         placeholder="0"
-                                        className="w-full bg-gray-50 border-2 border-gray-100 rounded-2xl py-3 px-4 text-xl font-black text-right text-gray-900 focus:border-primary focus:ring-0 transition-all placeholder:text-gray-200"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-1">CATATAN NOTA (OPSIONAL)</label>
+                                    <textarea
+                                        value={receiptNote}
+                                        onChange={(e) => setReceiptNote(e.target.value)}
+                                        placeholder="Contoh: Terima kasih bosku!"
+                                        rows={2}
+                                        className="w-full bg-gray-50 border-2 border-gray-100 rounded-2xl py-2 px-4 text-xs font-bold text-gray-900 focus:border-primary focus:ring-0 transition-all placeholder:text-gray-200 resize-none"
                                     />
                                 </div>
 
@@ -989,7 +1002,8 @@ export default function TransactionsPage() {
                                     paymentAmount,
                                     change: cleanChange,
                                     member: selectedMember,
-                                    cashier: userProfile?.full_name || 'Admin'
+                                    cashier: userProfile?.full_name || 'Admin',
+                                    note: receiptNote
                                 }}
                             />
                         </div>
@@ -1030,7 +1044,8 @@ export default function TransactionsPage() {
                     paymentAmount,
                     change: cleanChange,
                     member: selectedMember,
-                    cashier: userProfile?.full_name || 'Admin'
+                    cashier: userProfile?.full_name || 'Admin',
+                    note: receiptNote
                 }}
             />
 

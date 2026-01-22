@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useTransition, useCallback } from 'react'
-import { Cog6ToothIcon, BuildingStorefrontIcon, GiftIcon, UserCircleIcon, ArrowRightOnRectangleIcon, UserGroupIcon, PlusIcon } from '@heroicons/react/24/outline'
+import { Cog6ToothIcon, BuildingStorefrontIcon, GiftIcon, UserCircleIcon, ArrowRightOnRectangleIcon, UserGroupIcon, PlusIcon, BriefcaseIcon } from '@heroicons/react/24/outline'
 import { getStoreProfile, updateStoreProfile, getPointConfig, updatePointConfig, getCurrentUser, logout } from './actions'
 import { useActionState } from 'react'
 import { useFormStatus } from 'react-dom'
@@ -57,8 +57,8 @@ export default function SettingsPage() {
     const tabs: { id: Tab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
         { id: 'profile', label: 'Profil Usaha', icon: BuildingStorefrontIcon },
         { id: 'loyalty', label: 'Loyalitas & Poin', icon: GiftIcon },
-        { id: 'users', label: 'Pengguna (Login)', icon: UserGroupIcon },
-        { id: 'employees', label: 'Karyawan', icon: UserGroupIcon }, // Use same or different icon
+        { id: 'users', label: 'Pengguna', icon: UserGroupIcon },
+        { id: 'employees', label: 'Karyawan', icon: BriefcaseIcon },
         { id: 'roles', label: 'Peran & Akses', icon: ShieldCheckIcon },
         { id: 'account', label: 'Akun Saya', icon: UserCircleIcon }
     ]
@@ -84,20 +84,20 @@ export default function SettingsPage() {
             </div>
 
             {/* Tabs */}
-            <div className="flex gap-2 bg-white p-2 rounded-xl shadow-sm border border-gray-200">
+            <div className="flex flex-wrap gap-1 bg-white p-1.5 rounded-xl shadow-sm border border-gray-200">
                 {tabs.map(tab => (
                     <button
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
                         className={clsx(
-                            'flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-medium transition-all cursor-pointer',
+                            'flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer min-w-[120px] sm:min-w-0',
                             activeTab === tab.id
                                 ? 'bg-primary text-white shadow-sm'
-                                : 'text-gray-600 hover:bg-gray-100'
+                                : 'text-gray-500 hover:bg-gray-50'
                         )}
                     >
-                        <tab.icon className="w-5 h-5" />
-                        <span className="hidden sm:inline">{tab.label}</span>
+                        <tab.icon className="w-4 h-4" />
+                        <span className="sm:inline uppercase tracking-tight">{tab.label}</span>
                     </button>
                 ))}
             </div>
@@ -311,15 +311,15 @@ function RoleManagement({ roles, allPermissions, onUpdate }: { roles: Role[]; al
             <h3 className="text-lg font-bold text-gray-900 mb-2">Manajemen Hak Akses</h3>
             <p className="text-sm text-gray-500 mb-6">Atur menu dan fitur yang dapat diakses oleh setiap peran.</p>
 
-            <div className="flex gap-4">
-                <div className="w-48 space-y-2">
+            <div className="flex flex-col lg:flex-row gap-6">
+                <div className="w-full lg:w-48 flex lg:flex-col gap-2 overflow-x-auto pb-2 lg:pb-0 scrollbar-hide">
                     {roles.map(role => (
                         <button
                             key={role.id}
                             onClick={() => setSelectedRole(role)}
                             className={clsx(
-                                "w-full px-4 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all text-left",
-                                selectedRole.id === role.id ? "bg-primary text-white shadow-lg" : "text-gray-500 hover:bg-gray-50"
+                                "flex-shrink-0 lg:w-full px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all text-center lg:text-left",
+                                selectedRole.id === role.id ? "bg-primary text-white shadow-lg" : "bg-gray-50 text-gray-500 hover:bg-gray-100"
                             )}
                         >
                             {role.name}
@@ -327,16 +327,16 @@ function RoleManagement({ roles, allPermissions, onUpdate }: { roles: Role[]; al
                     ))}
                 </div>
 
-                <div className="flex-1 bg-gray-50/50 rounded-2xl border border-gray-100 p-6">
+                <div className="flex-1 bg-slate-50/50 rounded-2xl border border-gray-100 p-4 sm:p-6">
                     <div className="flex justify-between items-center mb-6">
                         <div>
-                            <h4 className="font-black text-primary text-sm uppercase tracking-wider italic">Hak Akses: {selectedRole.name}</h4>
+                            <h4 className="font-black text-primary text-xs uppercase tracking-wider italic">Hak Akses: {selectedRole.name}</h4>
                             <p className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-widest">{selectedRole.description || 'Tidak ada deskripsi'}</p>
                         </div>
                         {isSaving && <span className="text-[10px] font-black text-orange-500 animate-pulse uppercase tracking-widest">Menyimpan...</span>}
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
                         {allPermissions.map(perm => {
                             const isGranted = selectedRole.permissions?.some(p => p.permission.code === perm.code)
                             return (
@@ -344,10 +344,10 @@ function RoleManagement({ roles, allPermissions, onUpdate }: { roles: Role[]; al
                                     key={perm.id}
                                     onClick={() => handleTogglePermission(perm.code)}
                                     className={clsx(
-                                        "flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left group",
+                                        "flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left group bg-white",
                                         isGranted
-                                            ? "bg-white border-primary shadow-sm"
-                                            : "bg-white border-transparent hover:border-gray-200 opacity-60 grayscale hover:grayscale-0 hover:opacity-100"
+                                            ? "border-primary shadow-sm"
+                                            : "border-gray-50 opacity-60 grayscale hover:grayscale-0 hover:opacity-100"
                                     )}
                                 >
                                     <div className={clsx(
@@ -357,7 +357,7 @@ function RoleManagement({ roles, allPermissions, onUpdate }: { roles: Role[]; al
                                         {isGranted && <CheckIcon className="w-4 h-4 stroke-[4]" />}
                                     </div>
                                     <div>
-                                        <p className="text-xs font-black text-gray-900 uppercase tracking-tight leading-none">{perm.name}</p>
+                                        <p className="text-[11px] font-black text-gray-900 uppercase tracking-tight leading-none">{perm.name}</p>
                                         <p className="text-[9px] font-bold text-gray-400 mt-1 uppercase tracking-widest">{perm.code}</p>
                                     </div>
                                 </button>

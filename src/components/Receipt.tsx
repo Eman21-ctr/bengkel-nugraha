@@ -24,6 +24,7 @@ type ReceiptProps = {
             points: number
         } | null
         cashier?: string // New: Cashier name
+        note?: string // New: Custom footer note
     }
     showOnScreen?: boolean
 }
@@ -120,6 +121,12 @@ export function Receipt({ storeInfo, transaction, showOnScreen = false }: Receip
             {transaction.member && (
                 <div className="text-[9px] border-t border-b border-dashed border-black py-1 mb-2 text-center">
                     <p>Total Poin: {transaction.member.points}</p>
+                </div>
+            )}
+
+            {transaction.note && (
+                <div className="text-[9px] border-t border-dashed border-black pt-2 mb-2 italic text-center leading-tight">
+                    <p>"{transaction.note}"</p>
                 </div>
             )}
 

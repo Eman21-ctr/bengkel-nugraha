@@ -28,6 +28,7 @@ export type TransactionPayload = {
     payment_method: 'cash' | 'qris'
     payment_amount: number
     queue_id?: string
+    note?: string
 }
 
 // Fetch products for POS
@@ -144,7 +145,8 @@ export async function processTransaction(payload: TransactionPayload) {
                 final_amount: payload.total,
                 payment_method: payload.payment_method,
                 payment_amount: payload.payment_amount,
-                change: payload.payment_amount - payload.total
+                change: payload.payment_amount - payload.total,
+                note: payload.note || null
             })
             .select('id, invoice_number')
             .single()
