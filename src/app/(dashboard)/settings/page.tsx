@@ -273,43 +273,84 @@ function RoleManagement({ roles, allPermissions, onUpdate }: { roles: Role[]; al
     const [selectedRole, setSelectedRole] = useState<Role | null>(null)
     const [isSaving, setIsSaving] = useState(false)
 
+    const PERMISSION_MODULES = [
+        { id: 'kasir', name: 'Menu Kasir', prefix: 'kasir' },
+        { id: 'stock', name: 'Stok Barang', prefix: 'stock' },
+        { id: 'service', name: 'Servis / Jasa', prefix: 'service' },
+        { id: 'member', name: 'Member Pelanggan', prefix: 'member' },
+        { id: 'report', name: 'Laporan', prefix: 'report' },
+        { id: 'settings', name: 'Pengaturan', prefix: 'settings' },
+        { id: 'guide', name: 'Panduan', prefix: 'guide' },
+    ]
+
+    const PERMISSION_LEVELS = [
+        { id: 'none', label: 'Tutup', codes: [] },
+        { id: 'view', label: 'Lihat', codes: ['view'] },
+        { id: 'create', label: 'Buat & Lihat', codes: ['view', 'create'] },
+        { id: 'manage', label: 'Kelola (Semua)', codes: ['view', 'create', 'manage'] },
+    ]
+
     useEffect(() => {
         if (!selectedRole && roles.length > 0) {
             setSelectedRole(roles.find(r => r.name === 'Staff') || roles[0])
         }
     }, [roles, selectedRole])
 
-    const handleTogglePermission = async (permCode: string) => {
+    const handleSetLevel = async (moduleId: string, levelId: string) => {
         if (!selectedRole) return
 
-        const currentPerms = selectedRole.permissions?.map(p => p.permission.code) || []
-        let newPerms: string[]
-        if (currentPerms.includes(permCode)) {
-            newPerms = currentPerms.filter(c => c !== permCode)
-        } else {
-            newPerms = [...currentPerms, permCode]
-        }
+        const module = PERMISSION_MODULES.find(m => m.id === moduleId)
+        const level = PERMISSION_LEVELS.find(l => l.id === levelId)
+        if (!module || !level) return
+
+        const currentCodes = selectedRole.permissions?.map(p => p.permission.code) || []
+
+        // Remove all current codes for this module
+        const otherCodes = currentCodes.filter(c => !c.startsWith(`${module.prefix}.`))
+
+        // Add new codes for this level
+        const newCodes = [...otherCodes, ...level.codes.map(suffix => `${module.prefix}.${suffix}`)]
+
+        // Keep '*' if it was there (Owner)
+        if (currentCodes.includes('*')) newCodes.push('*')
 
         setIsSaving(true)
-        const res = await updateRolePermissions(selectedRole.id, newPerms)
+        const res = await updateRolePermissions(selectedRole.id, newCodes)
         setIsSaving(false)
 
         if (res.success) {
             onUpdate()
-            // Update local state for immediate feedback
             setSelectedRole({
                 ...selectedRole,
-                permissions: newPerms.map(code => ({ permission: { code } }))
+                permissions: newCodes.map(code => ({ permission: { code } }))
             })
         }
     }
 
+    const getModuleLevel = (moduleId: string) => {
+        if (!selectedRole) return 'none'
+        if (selectedRole.permissions?.some(p => p.permission.code === '*')) return 'manage'
+
+        const module = PERMISSION_MODULES.find(m => m.id === moduleId)
+        if (!module) return 'none'
+
+        const currentCodes = selectedRole.permissions?.map(p => p.permission.code) || []
+        const moduleCodes = currentCodes.filter(c => c.startsWith(`${module.prefix}.`))
+
+        if (moduleCodes.includes(`${module.prefix}.manage`)) return 'manage'
+        if (moduleCodes.includes(`${module.prefix}.create`)) return 'create'
+        if (moduleCodes.includes(`${module.prefix}.view`)) return 'view'
+        return 'none'
+    }
+
     if (!selectedRole) return <div className="p-12 text-center text-gray-500 font-bold italic">Memuat data peran...</div>
+
+    const isOwner = selectedRole.name === 'Owner'
 
     return (
         <div className="space-y-6">
             <h3 className="text-lg font-bold text-gray-900 mb-2">Manajemen Hak Akses</h3>
-            <p className="text-sm text-gray-500 mb-6">Atur menu dan fitur yang dapat diakses oleh setiap peran.</p>
+            <p className="text-sm text-gray-500 mb-6">Atur tingkat akses setiap peran untuk masing-masing menu.</p>
 
             <div className="flex flex-col lg:flex-row gap-6">
                 <div className="w-full lg:w-48 flex lg:flex-col gap-2 overflow-x-auto pb-2 lg:pb-0 scrollbar-hide">
@@ -331,39 +372,48 @@ function RoleManagement({ roles, allPermissions, onUpdate }: { roles: Role[]; al
                     <div className="flex justify-between items-center mb-6">
                         <div>
                             <h4 className="font-black text-primary text-xs uppercase tracking-wider italic">Hak Akses: {selectedRole.name}</h4>
-                            <p className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-widest">{selectedRole.description || 'Tidak ada deskripsi'}</p>
+                            <p className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-widest leading-tight">{selectedRole.description || 'Tidak ada deskripsi'}</p>
                         </div>
                         {isSaving && <span className="text-[10px] font-black text-orange-500 animate-pulse uppercase tracking-widest">Menyimpan...</span>}
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-                        {allPermissions.map(perm => {
-                            const isGranted = selectedRole.permissions?.some(p => p.permission.code === perm.code)
-                            return (
-                                <button
-                                    key={perm.id}
-                                    onClick={() => handleTogglePermission(perm.code)}
-                                    className={clsx(
-                                        "flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left group bg-white",
-                                        isGranted
-                                            ? "border-primary shadow-sm"
-                                            : "border-gray-50 opacity-60 grayscale hover:grayscale-0 hover:opacity-100"
-                                    )}
-                                >
-                                    <div className={clsx(
-                                        "w-5 h-5 rounded-md flex items-center justify-center transition-colors",
-                                        isGranted ? "bg-primary text-white" : "bg-gray-100 text-gray-300"
-                                    )}>
-                                        {isGranted && <CheckIcon className="w-4 h-4 stroke-[4]" />}
+                    {isOwner ? (
+                        <div className="bg-white p-12 rounded-2xl border-2 border-dashed border-primary/20 flex flex-col items-center text-center">
+                            <ShieldCheckIcon className="w-16 h-16 text-primary mb-4 opacity-20" />
+                            <h5 className="font-black text-gray-900 uppercase tracking-widest mb-2">Akses Pemilik (Full)</h5>
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em]">Peran Owner memiliki akses penuh dan tidak dapat diubah.</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-3">
+                            {PERMISSION_MODULES.map(module => {
+                                const currentLevel = getModuleLevel(module.id)
+                                return (
+                                    <div key={module.id} className="bg-white p-4 rounded-xl border border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                        <div>
+                                            <p className="text-[11px] font-black text-gray-900 uppercase tracking-tight leading-none">{module.name}</p>
+                                            <p className="text-[9px] font-bold text-gray-400 mt-1.5 uppercase tracking-widest">{module.prefix}.*</p>
+                                        </div>
+                                        <div className="flex flex-wrap gap-1">
+                                            {PERMISSION_LEVELS.map(level => (
+                                                <button
+                                                    key={level.id}
+                                                    onClick={() => handleSetLevel(module.id, level.id)}
+                                                    className={clsx(
+                                                        "px-3 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all border-2",
+                                                        currentLevel === level.id
+                                                            ? "bg-primary border-primary text-white shadow-sm"
+                                                            : "bg-gray-50 border-gray-50 text-gray-400 hover:border-gray-200"
+                                                    )}
+                                                >
+                                                    {level.label}
+                                                </button>
+                                            ))}
+                                        </div>
                                     </div>
-                                    <div>
-                                        <p className="text-[11px] font-black text-gray-900 uppercase tracking-tight leading-none">{perm.name}</p>
-                                        <p className="text-[9px] font-bold text-gray-400 mt-1 uppercase tracking-widest">{perm.code}</p>
-                                    </div>
-                                </button>
-                            )
-                        })}
-                    </div>
+                                )
+                            })}
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
