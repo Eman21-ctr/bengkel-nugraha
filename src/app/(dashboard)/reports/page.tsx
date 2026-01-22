@@ -13,6 +13,7 @@ import {
     PrinterIcon,
     XMarkIcon
 } from '@heroicons/react/24/outline'
+import * as XLSX from 'xlsx'
 import { Receipt } from '@/components/Receipt'
 import {
     getSalesSummary,
@@ -101,6 +102,82 @@ export default function ReportsPage() {
     const formatCurrency = (amount: number) =>
         new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount)
 
+    const handleExportExcel = () => {
+        let data: any[] = []
+        let filename = `Laporan_${reportType}_${period}`
+
+        if (reportType === 'sales') {
+            data = [
+                ['RINGKASAN PENJUALAN'],
+                ['Total Penjualan', summary.totalSales],
+                ['Total Transaksi', summary.totalTransactions],
+                ['Bengkel', summary.bengkelSales],
+                ['Kafe', summary.kafeSales],
+                [''],
+                ['DETAIL BENGKEL'],
+                ['Item', 'Qty', 'Total'],
+                ...categoryDetail.bengkel.map(i => [i.name, i.qty, i.total]),
+                [''],
+                ['DETAIL KAFE'],
+                ['Item', 'Qty', 'Total'],
+                ...categoryDetail.kafe.map(i => [i.name, i.qty, i.total])
+            ]
+        } else if (reportType === 'transactions') {
+            data = [
+                ['No. Invoice', 'Tanggal', 'Tipe', 'Pelanggan', 'Kasir', 'Total', 'Metode'],
+                ...transactions.map(t => [
+                    t.invoice_number,
+                    new Date(t.created_at).toLocaleString(),
+                    t.type,
+                    t.member?.name || 'Umum',
+                    t.profiles?.full_name || 'Admin',
+                    t.final_amount,
+                    t.payment_method
+                ])
+            ]
+        } else if (reportType === 'items') {
+            data = [
+                ['TOP 10 BARANG'],
+                ['Nama', 'Qty Terjual', 'Revenue'],
+                ...topProducts.map(p => [p.name, p.qty, p.revenue]),
+                [''],
+                ['TOP 10 JASA'],
+                ['Nama', 'Qty', 'Revenue'],
+                ...topServices.map(s => [s.name, s.qty, s.revenue])
+            ]
+        } else if (reportType === 'stock') {
+            data = [
+                ['RIWAYAT PERGERAKAN STOK'],
+                ['Waktu', 'Item', 'Tipe', 'Qty', 'Awal', 'Akhir', 'Ket'],
+                ...stockMovements.map(m => [
+                    new Date(m.created_at).toLocaleString(),
+                    m.product?.name,
+                    m.type,
+                    m.qty,
+                    m.stock_before,
+                    m.stock_after,
+                    m.description
+                ]),
+                [''],
+                ['STOK MENIPIS'],
+                ['Nama', 'Stok', 'Min. Stok', 'Unit'],
+                ...lowStock.map(l => [l.name, l.stock, l.min_stock, l.unit])
+            ]
+        } else if (reportType === 'member') {
+            data = [
+                ['STATISTIK MEMBER'],
+                ['Total Member', memberData?.totalMembers],
+                ['Aktif Bulan Ini', memberData?.activeCount],
+                ['Poin Beredar', memberData?.totalPoints]
+            ]
+        }
+
+        const ws = XLSX.utils.aoa_to_sheet(data)
+        const wb = XLSX.utils.book_new()
+        XLSX.utils.book_append_sheet(wb, ws, "Laporan")
+        XLSX.writeFile(wb, `${filename}.xlsx`)
+    }
+
     const handlePrintReceipt = () => {
         document.body.classList.add('is-printing-receipt')
         window.print()
@@ -142,10 +219,10 @@ export default function ReportsPage() {
                             {isPending ? 'Memuat...' : 'Tampilkan'}
                         </button>
                         <button
-                            onClick={() => window.print()}
-                            className="px-6 py-2 bg-gray-100 text-gray-700 font-bold rounded-lg hover:bg-gray-200 transition-colors cursor-pointer"
+                            onClick={handleExportExcel}
+                            className="px-6 py-2 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 transition-colors cursor-pointer flex items-center gap-2"
                         >
-                            Export PDF
+                            Export Excel
                         </button>
                     </div>
                 </div>
