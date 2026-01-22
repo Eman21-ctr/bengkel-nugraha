@@ -143,13 +143,13 @@ export default function TransactionsPage() {
         })
     }
 
-    // Search members
+    // Search members - More sensitive (1 char, 150ms debounce)
     useEffect(() => {
-        if (memberSearch.length >= 2) {
+        if (memberSearch.length >= 1) {
             const timer = setTimeout(async () => {
                 const results = await searchMembers(memberSearch)
                 setMemberResults(results)
-            }, 300)
+            }, 150)
             return () => clearTimeout(timer)
         } else {
             setMemberResults([])
@@ -572,7 +572,7 @@ export default function TransactionsPage() {
                             )}>
                                 <div className="flex flex-col md:flex-row md:items-center gap-3">
                                     <div className="flex-1">
-                                        <label className="text-[8px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1.5 block ml-1">IDENTITAS PELANGGAN (WAJIB BENGKEL)</label>
+                                        <label className="text-[8px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1.5 block ml-1">PELANGGAN</label>
                                         {selectedMember ? (
                                             <div className="flex items-center justify-between">
                                                 <div className="flex items-center gap-4">
@@ -651,32 +651,12 @@ export default function TransactionsPage() {
 
                             {/* Filter & Search Bar - ALWAYS VISIBLE */}
                             <div className="flex flex-col gap-3">
-                                <div className="flex gap-2 p-1 bg-gray-100 rounded-xl">
-                                    <button
-                                        onClick={() => setTxType('bengkel')}
-                                        className={clsx(
-                                            'flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer',
-                                            txType === 'bengkel' ? 'bg-primary text-white shadow-md' : 'text-gray-500 hover:bg-gray-200'
-                                        )}
-                                    >
-                                        <WrenchScrewdriverIcon className="w-4 h-4" /> Bengkel
-                                    </button>
-                                    <button
-                                        onClick={() => setTxType('kafe')}
-                                        className={clsx(
-                                            'flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer',
-                                            txType === 'kafe' ? 'bg-secondary text-white shadow-md' : 'text-gray-500 hover:bg-gray-200'
-                                        )}
-                                    >
-                                        <ShoppingCartIcon className="w-4 h-4" /> Kafe
-                                    </button>
-                                </div>
                                 <div className="flex gap-2">
                                     <div className="relative flex-1">
                                         <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                                         <input
                                             type="text"
-                                            placeholder={`Cari ${txType === 'bengkel' ? 'jasa / sparepart' : 'makanan / minuman'}...`}
+                                            placeholder="Cari produk / jasa..."
                                             value={itemSearch}
                                             onChange={(e) => {
                                                 setItemSearch(e.target.value);
@@ -704,62 +684,61 @@ export default function TransactionsPage() {
                             </div>
                         </div>
 
-                        {/* Items Grid */}
+                        {/* Items Grid - Show both always */}
                         <div className={clsx(
                             "flex-1 overflow-y-auto p-4 lg:block",
                             !showMobileItems && "hidden"
                         )}>
-                            {txType === 'bengkel' && (
-                                <>
-                                    <div className="flex items-center gap-2 mb-4">
-                                        <div className="h-1.5 w-8 bg-orange-400 rounded-full" />
-                                        <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Jasa Servis Professional</h3>
-                                    </div>
-                                    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 mb-8">
-                                        {filteredServices.map(service => {
-                                            const customPriceObj = selectedMember ? service.prices?.find(p =>
-                                                p.vehicle_type === selectedMember.vehicle_type &&
-                                                p.vehicle_size === selectedMember.vehicle_size
-                                            ) : null;
-                                            const displayPrice = customPriceObj ? customPriceObj.price : service.price;
+                            {/* Jasa Section */}
+                            <>
+                                <div className="flex items-center gap-2 mb-4">
+                                    <div className="h-1.5 w-8 bg-orange-400 rounded-full" />
+                                    <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Jasa Servis Professional</h3>
+                                </div>
+                                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 mb-8">
+                                    {filteredServices.map(service => {
+                                        const customPriceObj = selectedMember ? service.prices?.find(p =>
+                                            p.vehicle_type === selectedMember.vehicle_type &&
+                                            p.vehicle_size === selectedMember.vehicle_size
+                                        ) : null;
+                                        const displayPrice = customPriceObj ? customPriceObj.price : service.price;
 
-                                            return (
-                                                <div key={service.id} className="relative group/item">
-                                                    <button
-                                                        onClick={() => addToCart(service, 'service')}
-                                                        className="w-full p-4 bg-orange-50/50 border border-orange-100 rounded-2xl text-left hover:bg-orange-50 hover:border-orange-300 transition-all cursor-pointer group relative overflow-hidden h-full flex flex-col justify-between"
-                                                    >
-                                                        <div className="relative z-10">
-                                                            <p className="font-black text-gray-900 text-xs leading-tight mb-2 uppercase tracking-wide">{service.name}</p>
-                                                            <div className="mt-auto">
-                                                                {customPriceObj ? (
-                                                                    <>
-                                                                        <p className="text-primary font-black text-base">{formatCurrency(customPriceObj.price)}</p>
-                                                                        <span className="inline-block mt-1 bg-primary text-white text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-tighter">Harga {selectedMember?.vehicle_type}</span>
-                                                                    </>
-                                                                ) : (
-                                                                    <p className="text-gray-400 font-bold text-[10px] uppercase tracking-widest italic">Pilih Kendaraan</p>
-                                                                )}
-                                                            </div>
+                                        return (
+                                            <div key={service.id} className="relative group/item">
+                                                <button
+                                                    onClick={() => addToCart(service, 'service')}
+                                                    className="w-full p-4 bg-orange-50/50 border border-orange-100 rounded-2xl text-left hover:bg-orange-50 hover:border-orange-300 transition-all cursor-pointer group relative overflow-hidden h-full flex flex-col justify-between"
+                                                >
+                                                    <div className="relative z-10">
+                                                        <p className="font-black text-gray-900 text-xs leading-tight mb-2 uppercase tracking-wide">{service.name}</p>
+                                                        <div className="mt-auto">
+                                                            {customPriceObj ? (
+                                                                <>
+                                                                    <p className="text-primary font-black text-base">{formatCurrency(customPriceObj.price)}</p>
+                                                                    <span className="inline-block mt-1 bg-primary text-white text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-tighter">Harga {selectedMember?.vehicle_type}</span>
+                                                                </>
+                                                            ) : (
+                                                                <p className="text-gray-400 font-bold text-[10px] uppercase tracking-widest italic">Pilih Kendaraan</p>
+                                                            )}
                                                         </div>
-                                                        <div className="absolute -bottom-4 -right-4 w-12 h-12 bg-orange-200 opacity-10 rounded-full group-hover:scale-150 transition-transform" />
-                                                    </button>
-                                                    <button
-                                                        onClick={(e) => { e.stopPropagation(); setEditingService(service as any); }}
-                                                        className="absolute top-2 right-2 p-1.5 bg-white shadow-sm border border-gray-100 rounded-lg text-gray-300 hover:text-primary transition-opacity opacity-0 group-hover/item:opacity-100 cursor-pointer"
-                                                    >
-                                                        <PencilIcon className="w-3 h-3" />
-                                                    </button>
-                                                </div>
-                                            )
-                                        })}
-                                    </div>
-                                </>
-                            )}
+                                                    </div>
+                                                    <div className="absolute -bottom-4 -right-4 w-12 h-12 bg-orange-200 opacity-10 rounded-full group-hover:scale-150 transition-transform" />
+                                                </button>
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); setEditingService(service as any); }}
+                                                    className="absolute top-2 right-2 p-1.5 bg-white shadow-sm border border-gray-100 rounded-lg text-gray-300 hover:text-primary transition-opacity opacity-0 group-hover/item:opacity-100 cursor-pointer"
+                                                >
+                                                    <PencilIcon className="w-3 h-3" />
+                                                </button>
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                            </>
 
                             <div className="flex items-center gap-2 mb-4">
                                 <div className="h-1.5 w-8 bg-blue-400 rounded-full" />
-                                <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">{txType === 'bengkel' ? 'Suku Cadang & Oli' : 'Menu Kafe'}</h3>
+                                <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Produk & Menu</h3>
                             </div>
                             <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
                                 {filteredProducts.map(product => (
@@ -935,6 +914,7 @@ export default function TransactionsPage() {
                                         value={paymentAmount || ''}
                                         onChange={(e) => setPaymentAmount(Number(e.target.value))}
                                         placeholder="0"
+                                        className="w-full bg-gray-50 border-2 border-gray-100 rounded-2xl py-2 px-4 text-xs font-black text-primary focus:border-primary focus:ring-0 transition-all placeholder:text-gray-200"
                                     />
                                 </div>
 
