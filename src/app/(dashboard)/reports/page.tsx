@@ -11,7 +11,10 @@ import {
     UserIcon,
     EyeIcon,
     PrinterIcon,
-    XMarkIcon
+    XMarkIcon,
+    CheckCircleIcon,
+    PlusIcon,
+    ArrowPathIcon
 } from '@heroicons/react/24/outline'
 import * as XLSX from 'xlsx'
 import { Receipt } from '@/components/Receipt'
@@ -26,6 +29,7 @@ import {
     getDetailedTransactions,
     type ReportPeriod
 } from './actions'
+import { getPaymentHistory, addPaymentRecord } from '../transactions/actions'
 import { getStoreProfile } from '../settings/actions'
 import clsx from 'clsx'
 
@@ -53,6 +57,8 @@ export default function ReportsPage() {
     const [memberData, setMemberData] = useState<any>(null)
     const [transactions, setTransactions] = useState<any[]>([])
     const [selectedTransaction, setSelectedTransaction] = useState<any>(null)
+    const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false)
+    const [selectedPaymentTx, setSelectedPaymentTx] = useState<any>(null)
     const [storeProfile, setStoreProfile] = useState({ name: '', address: '', phone: '' })
 
     const [isPending, startTransition] = useTransition()
@@ -543,6 +549,8 @@ export default function ReportsPage() {
                                         <th className="px-6 py-4 text-left">Kasir</th>
                                         <th className="px-6 py-4 text-center">Tipe</th>
                                         <th className="px-6 py-4 text-right">Total</th>
+                                        <th className="px-6 py-4 text-center">Status Bayar</th>
+                                        <th className="px-6 py-4 text-right text-red-500">Sisa</th>
                                         <th className="px-6 py-4 text-center">Aksi</th>
                                     </tr>
                                 </thead>
@@ -565,13 +573,38 @@ export default function ReportsPage() {
                                             </td>
                                             <td className="px-6 py-4 text-right font-black text-gray-900">{formatCurrency(tx.final_amount)}</td>
                                             <td className="px-6 py-4 text-center">
-                                                <button
-                                                    onClick={() => setSelectedTransaction(tx)}
-                                                    className="p-2 text-primary hover:bg-primary/10 rounded-lg transition-all"
-                                                    title="Lihat Detail & Cetak"
-                                                >
-                                                    <EyeIcon className="w-5 h-5" />
-                                                </button>
+                                                <span className={clsx(
+                                                    "px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter",
+                                                    tx.payment_status === 'Lunas' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                                                )}>
+                                                    {tx.payment_status || 'Lunas'}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 text-right font-black text-red-500 text-xs">
+                                                {tx.payment_status === 'Belum Lunas' ? formatCurrency(tx.final_amount - (tx.payment_amount || 0)) : '-'}
+                                            </td>
+                                            <td className="px-6 py-4 text-center whitespace-nowrap">
+                                                <div className="flex items-center justify-center gap-1">
+                                                    <button
+                                                        onClick={() => setSelectedTransaction(tx)}
+                                                        className="p-2 text-primary hover:bg-primary/10 rounded-lg transition-all"
+                                                        title="Lihat Detail & Cetak"
+                                                    >
+                                                        <EyeIcon className="w-5 h-5" />
+                                                    </button>
+                                                    {tx.payment_status === 'Belum Lunas' && (
+                                                        <button
+                                                            onClick={() => {
+                                                                setSelectedPaymentTx(tx)
+                                                                setIsPaymentModalOpen(true)
+                                                            }}
+                                                            className="p-2 text-orange-500 hover:bg-orange-50 rounded-lg transition-all"
+                                                            title="Manajemen Pembayaran / Termin"
+                                                        >
+                                                            <BanknotesIcon className="w-5 h-5" />
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </td>
                                         </tr>
                                     ))}
@@ -680,6 +713,18 @@ export default function ReportsPage() {
             <div className="hidden print:block fixed bottom-0 left-0 right-0 text-[10px] text-gray-400 text-center pb-4">
                 Dicetak pada {new Date().toLocaleString('id-ID')} | Nugraha Bengkel & Kios
             </div>
+
+            {/* Payment History Modal */}
+            {isPaymentModalOpen && selectedPaymentTx && (
+                <PaymentHistoryModal
+                    transaction={selectedPaymentTx}
+                    onClose={() => {
+                        setIsPaymentModalOpen(false)
+                        setSelectedPaymentTx(null)
+                        loadData() // Refresh data using the existing function
+                    }}
+                />
+            )}
         </div>
     )
 }
@@ -718,3 +763,162 @@ function SummaryCard({
     )
 }
 
+function PaymentHistoryModal({ transaction, onClose }: { transaction: any, onClose: () => void }) {
+    const [history, setHistory] = useState<any[]>([])
+    const [isLoading, setIsLoading] = useState(true)
+    const [isSaving, setIsSaving] = useState(false)
+    const [amount, setAmount] = useState(0)
+    const [method, setMethod] = useState('cash')
+    const [note, setNote] = useState('')
+
+    useEffect(() => {
+        async function load() {
+            const data = await getPaymentHistory(transaction.id)
+            setHistory(data)
+            setIsLoading(false)
+
+            // Set default amount to remaining balance
+            const paid = data.reduce((sum: number, p: any) => sum + Number(p.amount), 0)
+            const remainingAmt = Number(transaction.final_amount) - paid
+            setAmount(remainingAmt > 0 ? remainingAmt : 0)
+            setNote(paid === 0 ? 'DP / Pembayaran Awal' : 'Pelunasan')
+        }
+        load()
+    }, [transaction])
+
+    const handleAddPayment = async () => {
+        if (amount <= 0) return
+        setIsSaving(true)
+        try {
+            await addPaymentRecord({
+                transaction_id: transaction.id,
+                amount,
+                payment_method: method,
+                note
+            })
+            onClose()
+        } catch (err) {
+            alert('Gagal menyimpan pembayaran')
+            console.error(err)
+        }
+        setIsSaving(false)
+    }
+
+    const totalPaid = history.reduce((sum: number, p: any) => sum + Number(p.amount), 0)
+    const remaining = Number(transaction.final_amount) - totalPaid
+
+    const formatCurrency = (val: number) =>
+        new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(val)
+
+    return (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-gray-900/80 backdrop-blur-sm p-4 overflow-y-auto">
+            <div className="bg-white rounded-[2.5rem] p-8 max-w-xl w-full animate-bounce-in shadow-2xl my-auto relative border border-gray-100">
+                <button onClick={onClose} className="absolute top-8 right-8 p-2 hover:bg-gray-100 rounded-full transition-all">
+                    <XMarkIcon className="w-6 h-6 text-gray-400" />
+                </button>
+
+                <div className="flex items-center gap-4 mb-8">
+                    <div className="w-14 h-14 bg-orange-100 rounded-2xl flex items-center justify-center">
+                        <BanknotesIcon className="w-8 h-8 text-orange-600" />
+                    </div>
+                    <div className="text-left">
+                        <h2 className="text-2xl font-black text-gray-900 leading-none italic uppercase tracking-tighter">Ringkasan Pembayaran</h2>
+                        <p className="text-gray-400 text-[10px] font-black uppercase tracking-[0.2em] mt-1">{transaction.invoice_number}</p>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 mb-8">
+                    <div className="bg-gray-50 p-4 rounded-3xl border border-gray-100">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">TOTAL TAGIHAN</p>
+                        <p className="text-xl font-black text-gray-900">{formatCurrency(transaction.final_amount)}</p>
+                    </div>
+                    <div className="bg-orange-50 p-4 rounded-3xl border border-orange-100">
+                        <p className="text-[10px] font-black text-orange-400 uppercase tracking-widest mb-1">SISA PEMBAYARAN</p>
+                        <p className="text-xl font-black text-orange-600">{remaining > 0 ? formatCurrency(remaining) : 'LUNAS'}</p>
+                    </div>
+                </div>
+
+                <div className="space-y-6 mb-8">
+                    <h3 className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] px-1">Riwayat Pembayaran</h3>
+                    <div className="space-y-3 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
+                        {isLoading ? (
+                            <div className="text-center py-6 text-gray-400 italic text-xs">Memuat riwayat...</div>
+                        ) : history.length === 0 ? (
+                            <div className="text-center py-6 text-gray-400 italic text-xs bg-gray-50 rounded-2xl">Belum ada riwayat pembayaran tercatat</div>
+                        ) : (
+                            history.map((p, idx) => (
+                                <div key={p.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-3xl group hover:bg-white hover:shadow-md hover:border-gray-100 border border-transparent transition-all">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
+                                        <div>
+                                            <p className="text-[10px] font-black text-gray-900 uppercase tracking-tight">{p.note || `Termin ${idx + 1}`}</p>
+                                            <p className="text-[9px] text-gray-400 font-bold">{new Date(p.created_at).toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })} • {p.payment_method.toUpperCase()}</p>
+                                        </div>
+                                    </div>
+                                    <p className="font-black text-gray-900 text-sm">+{formatCurrency(p.amount)}</p>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </div>
+
+                {remaining > 0 && (
+                    <div className="bg-blue-50/50 p-6 rounded-[2.5rem] border border-blue-100">
+                        <h3 className="text-[11px] font-black text-blue-400 uppercase tracking-[0.2em] mb-4 text-center">Input Pembayaran Baru</h3>
+                        <div className="space-y-4">
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-1.5">
+                                    <label className="text-[9px] font-black text-blue-400 uppercase tracking-widest ml-1">NOMINAL (RP)</label>
+                                    <input
+                                        type="number"
+                                        value={amount || ''}
+                                        onChange={(e) => setAmount(Number(e.target.value))}
+                                        className="w-full bg-white border-2 border-blue-100 rounded-2xl py-2.5 px-4 text-sm font-black text-blue-600 focus:border-blue-400 outline-none transition-all"
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[9px] font-black text-blue-400 uppercase tracking-widest ml-1">METODE</label>
+                                    <select
+                                        value={method}
+                                        onChange={(e) => setMethod(e.target.value)}
+                                        className="w-full bg-white border-2 border-blue-100 rounded-2xl py-2.5 px-4 text-sm font-bold text-gray-700 focus:border-blue-400 outline-none transition-all"
+                                    >
+                                        <option value="cash">TUNAI</option>
+                                        <option value="qris">QRIS</option>
+                                        <option value="transfer">TRANSFER</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-[9px] font-black text-blue-400 uppercase tracking-widest ml-1">KETERANGAN (OPSIONAL)</label>
+                                <input
+                                    type="text"
+                                    value={note}
+                                    onChange={(e) => setNote(e.target.value)}
+                                    placeholder="DP / Pelunasan / Termin..."
+                                    className="w-full bg-white border-2 border-blue-100 rounded-2xl py-2.5 px-4 text-sm font-bold text-gray-700 placeholder:text-gray-300 focus:border-blue-400 outline-none transition-all"
+                                />
+                            </div>
+                            <button
+                                onClick={handleAddPayment}
+                                disabled={isSaving || amount <= 0}
+                                className="w-full py-4 bg-blue-600 text-white font-black text-xs uppercase tracking-[0.2em] rounded-2xl hover:bg-blue-700 transition-all disabled:opacity-30 flex items-center justify-center gap-2 shadow-lg shadow-blue-200"
+                            >
+                                {isSaving ? <ArrowPathIcon className="w-5 h-5 animate-spin" /> : <PlusIcon className="w-5 h-5" />}
+                                SIMPAN PEMBAYARAN
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {remaining <= 0 && (
+                    <div className="bg-green-50 p-6 rounded-[2.5rem] border border-green-100 text-center">
+                        <CheckCircleIcon className="w-12 h-12 text-green-500 mx-auto mb-2" />
+                        <h4 className="font-black text-green-700 uppercase tracking-widest">Transaksi Lunas</h4>
+                        <p className="text-[10px] text-green-600 font-bold uppercase mt-1">Semua tagihan telah terbayar penuh</p>
+                    </div>
+                )}
+            </div>
+        </div>
+    )
+}

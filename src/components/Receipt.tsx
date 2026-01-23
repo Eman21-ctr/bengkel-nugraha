@@ -112,10 +112,18 @@ export function Receipt({ storeInfo, transaction, showOnScreen = false }: Receip
                     <span>Bayar ({transaction.paymentMethod === 'qris' ? 'QRIS' : 'TUNAI'})</span>
                     <span>{formatCurrency(transaction.paymentAmount)}</span>
                 </div>
-                <div className="flex justify-between">
-                    <span>Kembali</span>
-                    <span>{formatCurrency(transaction.change)}</span>
-                </div>
+                {transaction.paymentAmount < transaction.total && (
+                    <div className="flex justify-between font-bold text-red-600">
+                        <span>Sisa Pembayaran</span>
+                        <span>{formatCurrency(transaction.total - transaction.paymentAmount)}</span>
+                    </div>
+                )}
+                {transaction.change > 0 && (
+                    <div className="flex justify-between">
+                        <span>Kembali</span>
+                        <span>{formatCurrency(transaction.change)}</span>
+                    </div>
+                )}
             </div>
 
             {transaction.member && showOnScreen && (

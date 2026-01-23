@@ -370,9 +370,15 @@ export default function TransactionsPage() {
     // Process payment
     const handlePayment = async () => {
         if (cart.length === 0) return
+
+        // Confirm if unpaid or partial
         if (paymentAmount < finalTotal) {
-            alert('Jumlah bayar kurang!')
-            return
+            const isPartial = paymentAmount > 0;
+            const msg = isPartial
+                ? `Pembayaran belum lunas (Sisa: ${formatCurrency(finalTotal - paymentAmount)}). Simpan sebagai Termin/Hutang?`
+                : `Belum ada pembayaran sama sekali. Simpan sebagai Transaksi Belum Lunas?`;
+
+            if (!confirm(msg)) return;
         }
 
         // Auto-claim reward if eligibility exists
@@ -945,10 +951,13 @@ export default function TransactionsPage() {
 
                                 <button
                                     onClick={handlePayment}
-                                    disabled={cart.length === 0 || Number(paymentAmount) < finalTotal || isProcessing}
-                                    className="w-full py-4 bg-primary text-white font-black text-sm uppercase tracking-[0.2em] rounded-2xl hover:bg-gray-900 transition-all disabled:opacity-30 disabled:grayscale cursor-pointer shadow-xl shadow-blue-100"
+                                    disabled={cart.length === 0 || isProcessing}
+                                    className={clsx(
+                                        "w-full py-4 font-black text-sm uppercase tracking-[0.2em] rounded-2xl transition-all disabled:opacity-30 disabled:grayscale cursor-pointer shadow-xl",
+                                        paymentAmount >= finalTotal ? "bg-primary text-white shadow-blue-100 hover:bg-gray-900" : "bg-orange-500 text-white shadow-orange-100 hover:bg-orange-600"
+                                    )}
                                 >
-                                    {isProcessing ? 'MEMPROSES...' : 'PROSES PEMBAYARAN'}
+                                    {isProcessing ? 'MEMPROSES...' : (paymentAmount >= finalTotal ? 'PROSES PEMBAYARAN' : 'PROSES TERMIN / HUTANG')}
                                 </button>
                             </div>
                         </div>

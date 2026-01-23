@@ -146,14 +146,26 @@ export async function processTransaction(payload: TransactionPayload) {
                 final_amount: payload.total,
                 payment_method: payload.payment_method,
                 payment_amount: payload.payment_amount,
-                change: payload.payment_amount - payload.total,
+                change: payload.payment_amount > payload.total ? payload.payment_amount - payload.total : 0,
                 note: payload.note || null,
-                cashier_name: payload.cashier_name || null // Save manual cashier name
+                cashier_name: payload.cashier_name || null,
+                payment_status: payload.payment_amount >= payload.total ? 'Lunas' : 'Belum Lunas'
             })
             .select('id, invoice_number')
             .single()
 
         if (txError) throw txError
+
+        // 1.1 Create initial payment record if amount > 0
+        if (payload.payment_amount > 0) {
+            const actualPayment = Math.min(payload.payment_amount, payload.total)
+            await supabase.from('transaction_payments').insert({
+                transaction_id: transaction.id,
+                amount: actualPayment,
+                payment_method: payload.payment_method,
+                note: payload.payment_amount >= payload.total ? 'Lunas' : 'DP / Cicilan 1'
+            })
+        }
 
         // 2. Create transaction items
         const itemsToInsert = payload.items.map(item => ({
@@ -341,4 +353,68 @@ export async function getEmployees() {
         return []
     }
     return data
+}
+
+export async function getPaymentHistory(transactionId: string) {
+    const supabase = await createClient()
+    const { data, error } = await supabase
+        .from('transaction_payments')
+        .select('*')
+        .eq('transaction_id', transactionId)
+        .order('created_at', { ascending: true })
+
+    if (error) {
+        console.error('Error fetching payment history:', error)
+        return []
+    }
+    return data
+}
+
+export async function addPaymentRecord(payload: {
+    transaction_id: string,
+    amount: number,
+    payment_method: string,
+    note: string
+}) {
+    const supabase = await createClient()
+
+    // 1. Insert payment record
+    const { error: pError } = await supabase
+        .from('transaction_payments')
+        .insert({
+            transaction_id: payload.transaction_id,
+            amount: payload.amount,
+            payment_method: payload.payment_method,
+            note: payload.note
+        })
+
+    if (pError) throw pError
+
+    // 2. Update transaction aggregate (payment_amount)
+    // We need to sum all payments for this transaction
+    const { data: payments } = await supabase
+        .from('transaction_payments')
+        .select('amount')
+        .eq('transaction_id', payload.transaction_id)
+
+    const totalPaid = (payments || []).reduce((sum, p) => sum + Number(p.amount), 0)
+
+    // 3. Get transaction total to check status
+    const { data: tx } = await supabase
+        .from('transactions')
+        .select('final_amount')
+        .eq('id', payload.transaction_id)
+        .single()
+
+    const newStatus = totalPaid >= Number(tx?.final_amount || 0) ? 'Lunas' : 'Belum Lunas'
+
+    await supabase.from('transactions')
+        .update({
+            payment_amount: totalPaid,
+            payment_status: newStatus
+        })
+        .eq('id', payload.transaction_id)
+
+    revalidatePath('/reports')
+    return { success: true }
 }
