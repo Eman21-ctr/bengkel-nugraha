@@ -29,6 +29,7 @@ export type TransactionPayload = {
     payment_amount: number
     queue_id?: string
     note?: string
+    cashier_name?: string // New: manual cashier name
 }
 
 // Fetch products for POS
@@ -146,7 +147,8 @@ export async function processTransaction(payload: TransactionPayload) {
                 payment_method: payload.payment_method,
                 payment_amount: payload.payment_amount,
                 change: payload.payment_amount - payload.total,
-                note: payload.note || null
+                note: payload.note || null,
+                cashier_name: payload.cashier_name || null // Save manual cashier name
             })
             .select('id, invoice_number')
             .single()
@@ -264,6 +266,7 @@ export async function getRecentTransactions(limit = 10) {
       final_amount,
       payment_method,
       created_at,
+      cashier_name,
       member:members(name)
     `)
         .order('created_at', { ascending: false })

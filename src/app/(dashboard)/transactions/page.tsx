@@ -82,6 +82,7 @@ export default function TransactionsPage() {
     const [receiptNote, setReceiptNote] = useState<string>('')
     const [showSuccess, setShowSuccess] = useState(false)
     const [invoiceNumber, setInvoiceNumber] = useState('')
+    const [selectedCashierName, setSelectedCashierName] = useState<string>('')
 
     const [isPending, startTransition] = useTransition()
     const [isProcessing, setIsProcessing] = useState(false)
@@ -124,6 +125,7 @@ export default function TransactionsPage() {
                 if (user) {
                     const { data: profile } = await createClient().from('profiles').select('full_name').eq('id', user.id).single()
                     setUserProfile(profile)
+                    setSelectedCashierName(profile?.full_name || 'Admin')
                 }
             } catch (err) {
                 console.error('POS: Initial load error', err)
@@ -391,7 +393,8 @@ export default function TransactionsPage() {
             payment_method: paymentMethod,
             payment_amount: paymentAmount,
             queue_id: selectedQueue?.id,
-            note: receiptNote
+            note: receiptNote,
+            cashier_name: selectedCashierName
         }
 
         const result = await processTransaction(payload)
@@ -919,6 +922,30 @@ export default function TransactionsPage() {
                                 </div>
 
                                 <div>
+                                    <label className="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-1">NAMA KASIR</label>
+                                    <select
+                                        value={selectedCashierName}
+                                        onChange={(e) => setSelectedCashierName(e.target.value)}
+                                        className="w-full bg-gray-50 border-2 border-gray-100 rounded-2xl py-2 px-4 text-xs font-bold text-gray-900 focus:border-primary focus:ring-0 transition-all"
+                                    >
+                                        <option value="">-- Pilih Kasir --</option>
+                                        <option value={userProfile?.full_name}>{userProfile?.full_name} (Sistem)</option>
+                                        {employees.filter(e => e.position === 'Kasir' || e.position === 'Admin').map(emp => (
+                                            <option key={emp.id} value={emp.name}>{emp.name}</option>
+                                        ))}
+                                        <option value="Manual">Lainnya (Ketik Manual)...</option>
+                                    </select>
+                                    {selectedCashierName === 'Manual' && (
+                                        <input
+                                            type="text"
+                                            placeholder="Ketik nama kasir..."
+                                            onChange={(e) => setSelectedCashierName(e.target.value)}
+                                            className="mt-2 w-full bg-gray-50 border-2 border-gray-100 rounded-2xl py-2 px-4 text-xs font-bold text-gray-900 focus:border-primary focus:ring-0 transition-all"
+                                        />
+                                    )}
+                                </div>
+
+                                <div>
                                     <label className="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-1">CATATAN NOTA (OPSIONAL)</label>
                                     <textarea
                                         value={receiptNote}
@@ -982,7 +1009,7 @@ export default function TransactionsPage() {
                                     paymentAmount,
                                     change: cleanChange,
                                     member: selectedMember,
-                                    cashier: userProfile?.full_name || 'Admin',
+                                    cashier: selectedCashierName || userProfile?.full_name || 'Admin',
                                     note: receiptNote
                                 }}
                             />
