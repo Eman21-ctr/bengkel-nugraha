@@ -394,7 +394,7 @@ export default function TransactionsPage() {
             payment_amount: paymentAmount,
             queue_id: selectedQueue?.id,
             note: receiptNote,
-            cashier_name: selectedCashierName
+            cashier_name: selectedCashierName || userProfile?.full_name || 'Admin'
         }
 
         const result = await processTransaction(payload)
@@ -923,26 +923,13 @@ export default function TransactionsPage() {
 
                                 <div>
                                     <label className="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-1">NAMA KASIR</label>
-                                    <select
+                                    <input
+                                        type="text"
                                         value={selectedCashierName}
                                         onChange={(e) => setSelectedCashierName(e.target.value)}
-                                        className="w-full bg-gray-50 border-2 border-gray-100 rounded-2xl py-2 px-4 text-xs font-bold text-gray-900 focus:border-primary focus:ring-0 transition-all"
-                                    >
-                                        <option value="">-- Pilih Kasir --</option>
-                                        <option value={userProfile?.full_name}>{userProfile?.full_name} (Sistem)</option>
-                                        {employees.filter(e => e.position === 'Kasir' || e.position === 'Admin').map(emp => (
-                                            <option key={emp.id} value={emp.name}>{emp.name}</option>
-                                        ))}
-                                        <option value="Manual">Lainnya (Ketik Manual)...</option>
-                                    </select>
-                                    {selectedCashierName === 'Manual' && (
-                                        <input
-                                            type="text"
-                                            placeholder="Ketik nama kasir..."
-                                            onChange={(e) => setSelectedCashierName(e.target.value)}
-                                            className="mt-2 w-full bg-gray-50 border-2 border-gray-100 rounded-2xl py-2 px-4 text-xs font-bold text-gray-900 focus:border-primary focus:ring-0 transition-all"
-                                        />
-                                    )}
+                                        placeholder={userProfile?.full_name || 'Admin'}
+                                        className="w-full bg-gray-50 border-2 border-gray-100 rounded-2xl py-2 px-4 text-xs font-bold text-gray-900 focus:border-primary focus:ring-0 transition-all placeholder:text-gray-200"
+                                    />
                                 </div>
 
                                 <div>
