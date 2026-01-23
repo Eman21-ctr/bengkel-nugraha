@@ -18,6 +18,7 @@ import {
 } from '@heroicons/react/24/outline'
 import * as XLSX from 'xlsx'
 import { Receipt } from '@/components/Receipt'
+import { PaymentReceipt } from '@/components/PaymentReceipt'
 import {
     getSalesSummary,
     getTopProducts,
@@ -59,6 +60,7 @@ export default function ReportsPage() {
     const [selectedTransaction, setSelectedTransaction] = useState<any>(null)
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false)
     const [selectedPaymentTx, setSelectedPaymentTx] = useState<any>(null)
+    const [printingPayment, setPrintingPayment] = useState<any>(null)
     const [storeProfile, setStoreProfile] = useState({ name: '', address: '', phone: '' })
 
     const [isPending, startTransition] = useTransition()
@@ -182,6 +184,29 @@ export default function ReportsPage() {
         const wb = XLSX.utils.book_new()
         XLSX.utils.book_append_sheet(wb, ws, "Laporan")
         XLSX.writeFile(wb, `${filename}.xlsx`)
+    }
+
+    // Handle printing specific payment
+    const handlePrintPayment = (payment: any, tx: any) => {
+        setPrintingPayment({
+            invoice: tx.invoice_number,
+            date: new Date(payment.created_at),
+            method: payment.payment_method,
+            amount: Number(payment.amount),
+            note: payment.note,
+            totalBill: Number(tx.final_amount),
+            paidSoFar: tx.payments.filter((p: any) => new Date(p.created_at) <= new Date(payment.created_at)).reduce((sum: number, p: any) => sum + Number(p.amount), 0),
+            remaining: Number(tx.final_amount) - tx.payments.filter((p: any) => new Date(p.created_at) <= new Date(payment.created_at)).reduce((sum: number, p: any) => sum + Number(p.amount), 0),
+            member: tx.member
+        })
+        setTimeout(() => {
+            document.body.classList.add('is-printing-payment')
+            window.print()
+            setTimeout(() => {
+                document.body.classList.remove('is-printing-payment')
+                setPrintingPayment(null)
+            }, 500)
+        }, 300)
     }
 
     const handlePrintReceipt = () => {
@@ -665,7 +690,8 @@ export default function ReportsPage() {
                                     paymentAmount: Number(selectedTransaction.final_amount), // Simplified for re-print
                                     change: 0,
                                     member: selectedTransaction.member,
-                                    cashier: selectedTransaction.cashier?.full_name
+                                    cashier: selectedTransaction.cashier?.full_name,
+                                    paymentHistory: selectedTransaction.payments
                                 }}
                             />
                         </div>
@@ -704,7 +730,8 @@ export default function ReportsPage() {
                         paymentAmount: Number(selectedTransaction.final_amount),
                         change: 0,
                         member: selectedTransaction.member,
-                        cashier: selectedTransaction.cashier?.full_name
+                        cashier: selectedTransaction.cashier?.full_name,
+                        paymentHistory: selectedTransaction.payments
                     }}
                 />
             )}
@@ -723,7 +750,15 @@ export default function ReportsPage() {
                         setSelectedPaymentTx(null)
                         loadData() // Refresh data using the existing function
                     }}
+                    onPrint={(p) => handlePrintPayment(p, selectedPaymentTx)}
                 />
+            )}
+
+            {/* Hidden Payment Receipt for Printing */}
+            {printingPayment && (
+                <div className="hidden print:block">
+                    <PaymentReceipt storeInfo={storeProfile} payment={printingPayment} />
+                </div>
             )}
         </div>
     )
@@ -763,7 +798,7 @@ function SummaryCard({
     )
 }
 
-function PaymentHistoryModal({ transaction, onClose }: { transaction: any, onClose: () => void }) {
+function PaymentHistoryModal({ transaction, onClose, onPrint }: { transaction: any, onClose: () => void, onPrint: (payment: any) => void }) {
     const [history, setHistory] = useState<any[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [isSaving, setIsSaving] = useState(false)
@@ -855,7 +890,16 @@ function PaymentHistoryModal({ transaction, onClose }: { transaction: any, onClo
                                             <p className="text-[9px] text-gray-400 font-bold">{new Date(p.created_at).toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })} • {p.payment_method.toUpperCase()}</p>
                                         </div>
                                     </div>
-                                    <p className="font-black text-gray-900 text-sm">+{formatCurrency(p.amount)}</p>
+                                    <div className="flex items-center gap-2">
+                                        <p className="font-black text-gray-900 text-sm">+{formatCurrency(p.amount)}</p>
+                                        <button
+                                            onClick={() => onPrint(p)}
+                                            className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition-all"
+                                            title="Cetak Kwitansi Pembayaran"
+                                        >
+                                            <PrinterIcon className="w-4 h-4" />
+                                        </button>
+                                    </div>
                                 </div>
                             ))
                         )}

@@ -50,6 +50,7 @@
 
 /* Default hide printable components on screen */
 #receipt-print,
+#payment-receipt-print,
 #queue-ticket-print,
 #member-card-print-root {
   display: none;
@@ -83,6 +84,21 @@
   }
 
   body.is-printing-receipt #receipt-print {
+    display: block !important;
+    position: fixed !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 80mm !important;
+    z-index: 99999;
+  }
+
+  /* Payment Receipt Logic */
+  body.is-printing-payment #payment-receipt-print,
+  body.is-printing-payment #payment-receipt-print * {
+    visibility: visible !important;
+  }
+
+  body.is-printing-payment #payment-receipt-print {
     display: block !important;
     position: fixed !important;
     left: 0 !important;

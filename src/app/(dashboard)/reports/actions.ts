@@ -310,7 +310,8 @@ export async function getDetailedTransactions(period: ReportPeriod, customStart?
             *,
             member:members(id, name, phone, vehicle_plate),
             cashier:profiles!transactions_user_id_fkey(full_name),
-            items:transaction_items(*)
+            items:transaction_items(*),
+            payments:transaction_payments(*)
         `)
         .gte('created_at', start.toISOString())
         .lte('created_at', end.toISOString())

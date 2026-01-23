@@ -25,6 +25,7 @@ type ReceiptProps = {
         } | null
         cashier?: string // New: Cashier name
         note?: string // New: Custom footer note
+        paymentHistory?: any[] // New: List of all payments for audit
     }
     showOnScreen?: boolean
 }
@@ -125,6 +126,20 @@ export function Receipt({ storeInfo, transaction, showOnScreen = false }: Receip
                     </div>
                 )}
             </div>
+
+            {transaction.paymentHistory && transaction.paymentHistory.length > 1 && (
+                <div className="text-[8px] border-t border-dashed border-black pt-2 mb-2">
+                    <p className="font-bold mb-1 uppercase text-center">Riwayat Pembayaran:</p>
+                    <div className="space-y-0.5">
+                        {transaction.paymentHistory.map((p, idx) => (
+                            <div key={idx} className="flex justify-between italic">
+                                <span>- {new Date(p.created_at).toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit' })} ({p.note || 'Bayar'})</span>
+                                <span>+ {formatCurrency(p.amount)}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {transaction.member && showOnScreen && (
                 <div className="text-[9px] border-t border-b border-dashed border-black py-1 mb-2 text-center">

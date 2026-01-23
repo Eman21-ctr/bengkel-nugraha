@@ -260,9 +260,9 @@ export async function processTransaction(payload: TransactionPayload) {
         revalidatePath('/')
 
         return { success: true, invoice: transaction.invoice_number }
-    } catch (error) {
+    } catch (error: any) {
         console.error('Transaction error:', error)
-        return { error: 'Gagal memproses transaksi' }
+        return { error: `Gagal memproses transaksi: ${error.message || 'Error unknown'}` }
     }
 }
 
