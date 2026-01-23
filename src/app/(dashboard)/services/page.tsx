@@ -70,8 +70,12 @@ export default function ServicesPage() {
                                 </div>
                                 <div className="min-w-0 flex-1 px-4">
                                     <p className="text-sm font-black text-gray-900 uppercase tracking-tight">{service.name}</p>
+                                    <div className="flex items-center gap-2 mt-1">
+                                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Detail Harga:</span>
+                                        <span className="text-[10px] font-black text-primary uppercase">Cek Menu Edit</span>
+                                    </div>
                                     {service.description && (
-                                        <p className="text-xs text-gray-500 mt-1">{service.description}</p>
+                                        <p className="text-[10px] text-gray-400 mt-0.5">{service.description}</p>
                                     )}
                                 </div>
                                 <div className="flex items-center gap-3">
@@ -137,35 +141,85 @@ export default function ServicesPage() {
 
 function AddServiceModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
     const [state, formAction] = useActionState(createService, null)
+    const vehicleTypes = ['R2', 'R3', 'R4'] as const
+    const vehicleSizes = ['Kecil', 'Sedang', 'Besar', 'Jumbo'] as const
 
     return (
         <div className="fixed inset-0 z-[100] overflow-y-auto" role="dialog" aria-modal="true">
-            <div className="fixed inset-0 bg-gray-500/75 transition-opacity" onClick={onClose}></div>
+            <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity" onClick={onClose}></div>
             <div className="flex min-h-full items-center justify-center p-4">
-                <div className="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl sm:my-8 sm:w-full sm:max-w-md p-6">
-                    <h3 className="text-lg font-medium text-gray-900 mb-4">Tambah Jasa Baru</h3>
+                <div className="relative transform overflow-hidden rounded-[32px] bg-white text-left shadow-2xl sm:my-8 sm:w-full sm:max-w-3xl">
+                    <div className="bg-primary px-8 py-6 flex justify-between items-center text-white">
+                        <div>
+                            <h3 className="text-xl font-black italic tracking-tight uppercase">Tambah Jasa Servis Baru</h3>
+                            <p className="text-white/70 text-[10px] font-bold uppercase tracking-widest mt-0.5">Input detail jasa dan daftar harga</p>
+                        </div>
+                        <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+                            <XMarkIcon className="w-6 h-6" />
+                        </button>
+                    </div>
 
-                    <form action={async (formData) => { await formAction(formData) }} className="space-y-4">
-                        {state?.error && <p className="text-red-600 text-sm bg-red-50 p-2 rounded">{state.error}</p>}
+                    <form action={async (formData) => { await formAction(formData) }} className="p-8 space-y-8">
+                        {state?.error && <p className="text-red-600 text-xs font-bold bg-red-50 p-4 rounded-2xl border border-red-100">{state.error}</p>}
                         {state?.success && (
-                            <div className="text-green-600 text-sm bg-green-50 p-2 rounded">
+                            <div className="text-green-600 text-xs font-bold bg-green-50 p-4 rounded-2xl border border-green-100">
                                 Berhasil! {setTimeout(onSuccess, 500) && ""}
                             </div>
                         )}
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">Nama Jasa</label>
-                            <input type="text" name="name" required className="input-std" placeholder="Ganti Oli, Servis Ringan, dll" />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div className="space-y-6">
+                                <h4 className="text-[11px] font-black text-primary uppercase tracking-[0.2em] border-b pb-2">Informasi Dasar</h4>
+                                <div>
+                                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Nama Jasa</label>
+                                    <input type="text" name="name" required className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm font-bold text-gray-900 focus:ring-2 focus:ring-primary transition-all" placeholder="Ganti Oli, Cuci Motor, dll" />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Keterangan (Opsional)</label>
+                                    <textarea name="description" rows={3} className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm font-bold text-gray-900 focus:ring-2 focus:ring-primary transition-all" placeholder="Deskripsi singkat jasa ini..."></textarea>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Tipe Komisi</label>
+                                        <select name="commission_type" className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm font-bold text-gray-900 focus:ring-2 focus:ring-primary transition-all">
+                                            <option value="fixed">NOMINAL (RP)</option>
+                                            <option value="percentage">PERSENTASE (%)</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Nilai Komisi</label>
+                                        <input type="number" name="commission_value" defaultValue={0} className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm font-bold text-gray-900 focus:ring-2 focus:ring-primary transition-all" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-6">
+                                <h4 className="text-[11px] font-black text-orange-500 uppercase tracking-[0.2em] border-b pb-2">Daftar Harga Per Kendaraan</h4>
+                                <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                                    {vehicleTypes.map(type => (
+                                        <div key={type} className="bg-orange-50/50 p-4 rounded-3xl border border-orange-100">
+                                            <p className="text-[10px] font-black text-orange-600 uppercase mb-3 text-center tracking-widest">KENDARAAN {type}</p>
+                                            <div className="grid grid-cols-2 gap-3">
+                                                {vehicleSizes.map(size => (
+                                                    <div key={size}>
+                                                        <label className="block text-[8px] font-black text-orange-400 uppercase tracking-widest mb-1 ml-1">{size}</label>
+                                                        <input
+                                                            type="number"
+                                                            name={`price_${type}_${size}`}
+                                                            placeholder="0"
+                                                            className="w-full px-3 py-2 bg-white border-none rounded-xl text-xs font-bold text-gray-900 focus:ring-2 focus:ring-orange-400 transition-all"
+                                                        />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
 
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">Keterangan (Opsional)</label>
-                            <textarea name="description" rows={2} className="input-std" placeholder="Deskripsi singkat..."></textarea>
-                        </div>
-
-                        <div className="mt-6 flex gap-3 justify-end">
-                            <button type="button" onClick={onClose} className="btn-secondary">Batal</button>
+                        <div className="flex gap-4 pt-4">
+                            <button type="button" onClick={onClose} className="flex-1 px-4 py-4 bg-gray-100 text-gray-500 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-gray-200 transition-all">Batal</button>
                             <SubmitButton />
                         </div>
                     </form>
@@ -258,6 +312,17 @@ function EditServiceModal({ service, onClose, onSuccess }: { service: Service; o
                                     <div className="col-span-2">
                                         <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Keterangan</label>
                                         <textarea name="description" defaultValue={service.description || ''} rows={2} className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm font-bold text-gray-900 focus:ring-2 focus:ring-primary transition-all"></textarea>
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Tipe Komisi</label>
+                                        <select name="commission_type" defaultValue={service.commission_type || 'fixed'} className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm font-bold text-gray-900 focus:ring-2 focus:ring-primary transition-all">
+                                            <option value="fixed">NOMINAL (RP)</option>
+                                            <option value="percentage">PERSENTASE (%)</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Nilai Komisi</label>
+                                        <input type="number" name="commission_value" defaultValue={service.commission_value || 0} className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm font-bold text-gray-900 focus:ring-2 focus:ring-primary transition-all" />
                                     </div>
                                 </div>
 

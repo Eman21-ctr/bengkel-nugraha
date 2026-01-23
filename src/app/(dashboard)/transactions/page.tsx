@@ -151,7 +151,7 @@ export default function TransactionsPage() {
             const timer = setTimeout(async () => {
                 const results = await searchMembers(memberSearch)
                 setMemberResults(results)
-            }, 150)
+            }, 50)
             return () => clearTimeout(timer)
         } else {
             setMemberResults([])
@@ -202,6 +202,8 @@ export default function TransactionsPage() {
                 if (customPrice) {
                     price = Number(customPrice.price)
                     console.log(`POS: Applied dynamic price for ${service.name}: ${price}`)
+                } else {
+                    price = 0 // Pure tiered pricing: if no match, price is 0
                 }
             }
 
@@ -316,7 +318,7 @@ export default function TransactionsPage() {
                     vehicle_plate: memberData.vehicle_plate || '',
                     points: memberData.points || 0,
                     vehicle_type: memberData.vehicle_type as 'R2' | 'R4',
-                    vehicle_size: memberData.vehicle_size as 'Kecil' | 'Sedang' | 'Besar',
+                    vehicle_size: memberData.vehicle_size as 'Kecil' | 'Sedang' | 'Besar' | 'Jumbo',
                     member_code: memberData.member_code,
                     visit_count: memberData.visit_count
                 }
@@ -342,7 +344,7 @@ export default function TransactionsPage() {
             const service = services.find(s => s.id === item.id)
             if (!service) return item
 
-            let price = Number(service.price) || 0
+            let price = 0
             if (selectedMember) {
                 const customPrice = service.prices?.find(p =>
                     p.vehicle_type === selectedMember.vehicle_type &&
@@ -576,8 +578,8 @@ export default function TransactionsPage() {
 
                             {/* Member Selection - The Core Flow */}
                             <div className={clsx(
-                                "p-2.5 rounded-2xl transition-all border-2",
-                                selectedMember ? "bg-green-50/50 border-green-200" : "bg-blue-50 border-primary shadow-lg shadow-blue-100"
+                                "p-3 rounded-2xl transition-all",
+                                selectedMember ? "bg-green-50" : "bg-slate-50 border border-slate-100"
                             )}>
                                 <div className="flex flex-col md:flex-row md:items-center gap-3">
                                     <div className="flex-1">
@@ -855,37 +857,34 @@ export default function TransactionsPage() {
                         <div className="p-4 bg-white border-t border-gray-100 space-y-4 shadow-[0_-10px_20px_rgba(0,0,0,0.02)]">
                             {/* Points Redemption Slider-style Toggle if Member exists */}
                             {selectedMember && selectedMember.points > 0 && (
-                                <div className="flex flex-col gap-2 p-3 bg-blue-50/50 rounded-2xl border border-blue-100">
-                                    <div className="flex items-center justify-between">
-                                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em]">Pakai Poin?</label>
-                                        <span className="text-[9px] font-black text-primary">MAX: {selectedMember?.points}</span>
-                                    </div>
-                                    <div className="flex items-center gap-3">
+                                <div className="flex items-center justify-between p-2 bg-blue-50/50 rounded-xl border border-blue-100">
+                                    <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest">LOYALTY POIN</label>
+                                    <div className="flex items-center gap-2">
                                         <input
                                             type="number"
                                             min="0"
                                             max={selectedMember?.points}
                                             value={pointsToUse}
                                             onChange={(e) => setPointsToUse(Math.min(Number(e.target.value), selectedMember?.points || 0))}
-                                            className="flex-1 bg-transparent border-b-2 border-gray-200 focus:border-primary outline-none py-1 text-sm font-black text-gray-900 text-right"
+                                            className="w-12 bg-white border border-blue-200 rounded px-1.5 py-0.5 text-[10px] font-black text-gray-900 text-center focus:ring-1 focus:ring-primary outline-none"
                                         />
-                                        <span className="text-[10px] font-black text-gray-300">PTS</span>
+                                        <span className="text-[8px] font-black text-primary uppercase">/ {selectedMember?.points} PTS</span>
                                     </div>
                                 </div>
                             )}
 
-                            <div className="space-y-1.5 pt-2">
-                                <div className="flex justify-between text-xs font-bold text-gray-400">
+                            <div className="space-y-1 pt-1">
+                                <div className="flex justify-between text-[9px] font-bold text-gray-400">
                                     <span>SUBTOTAL</span>
                                     <span>{formatCurrency(cleanSubtotal)}</span>
                                 </div>
                                 {pointDiscount > 0 && (
-                                    <div className="flex justify-between text-xs font-bold text-green-600">
-                                        <span className="flex items-center gap-1.5"><CheckCircleIcon className="w-4 h-4" /> DISKON POIN</span>
+                                    <div className="flex justify-between text-[9px] font-black text-green-600">
+                                        <span>DISKON POIN</span>
                                         <span>- {formatCurrency(pointDiscount)}</span>
                                     </div>
                                 )}
-                                <div className="flex justify-between text-2xl font-black text-gray-900 border-t border-gray-100 pt-3 mt-2">
+                                <div className="flex justify-between text-lg font-black text-gray-900 border-t border-gray-100 pt-1.5 mt-1.5">
                                     <span className="tracking-tighter italic">TOTAL</span>
                                     <span className="text-primary">{formatCurrency(finalTotal)}</span>
                                 </div>
@@ -912,40 +911,42 @@ export default function TransactionsPage() {
                                 </button>
                             </div>
 
-                            <div className="space-y-3">
-                                <div>
-                                    <div className="flex justify-between mb-1">
-                                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest">NOMINAL BAYAR</label>
-                                        {cleanChange > 0 && <span className="text-[9px] font-black text-green-600">KEMBALI: {formatCurrency(cleanChange)}</span>}
+                            <div className="space-y-2">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                    <div>
+                                        <div className="flex justify-between mb-0.5">
+                                            <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-1">NOMINAL BAYAR</label>
+                                            {cleanChange > 0 && <span className="text-[8px] font-black text-green-600">KEMBALI: {formatCurrency(cleanChange)}</span>}
+                                        </div>
+                                        <input
+                                            type="number"
+                                            value={paymentAmount || ''}
+                                            onChange={(e) => setPaymentAmount(Number(e.target.value))}
+                                            placeholder="0"
+                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl py-1.5 px-3 text-[10px] font-black text-primary focus:border-primary focus:ring-0 transition-all placeholder:text-gray-200"
+                                        />
                                     </div>
-                                    <input
-                                        type="number"
-                                        value={paymentAmount || ''}
-                                        onChange={(e) => setPaymentAmount(Number(e.target.value))}
-                                        placeholder="0"
-                                        className="w-full bg-gray-50 border-2 border-gray-100 rounded-2xl py-2 px-4 text-xs font-black text-primary focus:border-primary focus:ring-0 transition-all placeholder:text-gray-200"
-                                    />
+
+                                    <div>
+                                        <label className="block text-[8px] font-black text-gray-400 uppercase tracking-widest mb-0.5 ml-1">NAMA KASIR</label>
+                                        <input
+                                            type="text"
+                                            value={selectedCashierName}
+                                            onChange={(e) => setSelectedCashierName(e.target.value)}
+                                            placeholder={userProfile?.full_name || 'Admin'}
+                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl py-1.5 px-3 text-[10px] font-bold text-gray-900 focus:border-primary focus:ring-0 transition-all placeholder:text-gray-200"
+                                        />
+                                    </div>
                                 </div>
 
                                 <div>
-                                    <label className="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-1">NAMA KASIR</label>
+                                    <label className="block text-[8px] font-black text-gray-400 uppercase tracking-widest mb-0.5 ml-1">CATATAN NOTA (OPSIONAL)</label>
                                     <input
                                         type="text"
-                                        value={selectedCashierName}
-                                        onChange={(e) => setSelectedCashierName(e.target.value)}
-                                        placeholder={userProfile?.full_name || 'Admin'}
-                                        className="w-full bg-gray-50 border-2 border-gray-100 rounded-2xl py-2 px-4 text-xs font-bold text-gray-900 focus:border-primary focus:ring-0 transition-all placeholder:text-gray-200"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-1">CATATAN NOTA (OPSIONAL)</label>
-                                    <textarea
                                         value={receiptNote}
                                         onChange={(e) => setReceiptNote(e.target.value)}
-                                        placeholder="Contoh: Terima kasih bosku!"
-                                        rows={2}
-                                        className="w-full bg-gray-50 border-2 border-gray-100 rounded-2xl py-2 px-4 text-xs font-bold text-gray-900 focus:border-primary focus:ring-0 transition-all placeholder:text-gray-200 resize-none"
+                                        placeholder="Terima kasih bosku!"
+                                        className="w-full bg-gray-50 border border-gray-200 rounded-xl py-1.5 px-3 text-[10px] font-bold text-gray-900 focus:border-primary focus:ring-0 transition-all placeholder:text-gray-200"
                                     />
                                 </div>
 

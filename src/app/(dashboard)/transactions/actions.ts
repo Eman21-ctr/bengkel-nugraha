@@ -75,7 +75,7 @@ export async function getServicesForPOS() {
 
 // Search members
 export async function searchMembers(query: string) {
-    if (!query || query.length < 2) return []
+    if (!query) return []
 
     const supabase = await createClient()
     const { data, error } = await supabase
@@ -168,17 +168,40 @@ export async function processTransaction(payload: TransactionPayload) {
         }
 
         // 2. Create transaction items
-        const itemsToInsert = payload.items.map(item => ({
-            transaction_id: transaction.id,
-            item_type: item.type,
-            product_id: item.type === 'product' ? item.id : null,
-            service_id: item.type === 'service' ? item.id : null,
-            item_name: item.name,
-            qty: item.qty,
-            price: item.price,
-            subtotal: item.subtotal,
-            performed_by: item.employee_id || null // Link the employee
-        }))
+        // Pre-fetch service commissions to ensure secure calculation
+        const serviceIds = payload.items.filter(i => i.type === 'service').map(i => i.id)
+        let serviceCommissions: any[] = []
+        if (serviceIds.length > 0) {
+            const { data } = await supabase.from('services').select('id, commission_type, commission_value').in('id', serviceIds)
+            serviceCommissions = data || []
+        }
+
+        const itemsToInsert = payload.items.map(item => {
+            let commission_amount = 0
+            if (item.type === 'service' && item.employee_id) {
+                const config = serviceCommissions.find(s => s.id === item.id)
+                if (config) {
+                    if (config.commission_type === 'percentage') {
+                        commission_amount = (item.subtotal * config.commission_value) / 100
+                    } else {
+                        commission_amount = config.commission_value * item.qty
+                    }
+                }
+            }
+
+            return {
+                transaction_id: transaction.id,
+                item_type: item.type,
+                product_id: item.type === 'product' ? item.id : null,
+                service_id: item.type === 'service' ? item.id : null,
+                item_name: item.name,
+                qty: item.qty,
+                price: item.price,
+                subtotal: item.subtotal,
+                performed_by: item.employee_id || null, // Link the employee
+                commission_amount
+            }
+        })
 
         const { error: itemsError } = await supabase
             .from('transaction_items')

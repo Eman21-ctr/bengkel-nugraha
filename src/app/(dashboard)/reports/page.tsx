@@ -28,13 +28,14 @@ import {
     getStockMovements,
     getMemberReport,
     getDetailedTransactions,
+    getTechnicianReport,
     type ReportPeriod
 } from './actions'
 import { getPaymentHistory, addPaymentRecord } from '../transactions/actions'
 import { getStoreProfile } from '../settings/actions'
 import clsx from 'clsx'
 
-type ReportType = 'sales' | 'items' | 'stock' | 'member' | 'transactions'
+type ReportType = 'sales' | 'items' | 'stock' | 'member' | 'transactions' | 'technician'
 
 export default function ReportsPage() {
     const [reportType, setReportType] = useState<ReportType>('sales')
@@ -57,6 +58,7 @@ export default function ReportsPage() {
     const [stockMovements, setStockMovements] = useState<any[]>([])
     const [memberData, setMemberData] = useState<any>(null)
     const [transactions, setTransactions] = useState<any[]>([])
+    const [technicianData, setTechnicianData] = useState<any[]>([])
     const [selectedTransaction, setSelectedTransaction] = useState<any>(null)
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false)
     const [selectedPaymentTx, setSelectedPaymentTx] = useState<any>(null)
@@ -94,6 +96,9 @@ export default function ReportsPage() {
             } else if (reportType === 'transactions') {
                 const data = await getDetailedTransactions(period, customStart, customEnd)
                 setTransactions(data)
+            } else if (reportType === 'technician') {
+                const data = await getTechnicianReport(period, customStart, customEnd)
+                setTechnicianData(data)
             }
         })
     }
@@ -229,7 +234,8 @@ export default function ReportsPage() {
         { value: 'transactions', label: 'Laporan Transaksi' },
         { value: 'items', label: 'Laporan Per Item' },
         { value: 'stock', label: 'Laporan Stok' },
-        { value: 'member', label: 'Laporan Member' }
+        { value: 'member', label: 'Laporan Member' },
+        { value: 'technician', label: 'Laporan Teknisi' }
     ]
 
     return (
@@ -643,6 +649,112 @@ export default function ReportsPage() {
                                 </tbody>
                             </table>
                         </div>
+                    </div>
+                )}
+
+                {/* Technician Report */}
+                {reportType === 'technician' && (
+                    <div className="space-y-6 animate-fade-in relative z-10">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <SummaryCard
+                                title="Total Teknisi"
+                                value={String(technicianData.length)}
+                                icon={UserIcon}
+                                color="blue"
+                            />
+                            <SummaryCard
+                                title="Total Komisi"
+                                value={formatCurrency(technicianData.reduce((sum, t) => sum + (Number(t.totalCommission) || 0), 0))}
+                                icon={BanknotesIcon}
+                                color="green"
+                            />
+                            <SummaryCard
+                                title="Rata-rata Pekerjaan"
+                                value={technicianData.length ? (technicianData.reduce((sum, t) => sum + t.totalJobs, 0) / technicianData.length).toFixed(1) : '0'}
+                                icon={WrenchScrewdriverIcon}
+                                color="orange"
+                            />
+                        </div>
+
+                        <div className="bg-white rounded-[2.5rem] border border-gray-100 overflow-hidden shadow-sm">
+                            <table className="w-full text-sm">
+                                <thead className="bg-gray-50 text-gray-500 uppercase text-[10px] font-bold">
+                                    <tr>
+                                        <th className="px-6 py-4 text-left">Teknisi</th>
+                                        <th className="px-6 py-4 text-center">Posisi</th>
+                                        <th className="px-6 py-4 text-center">Jml Pekerjaan</th>
+                                        <th className="px-6 py-4 text-right">Total Komisi</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100 font-medium">
+                                    {technicianData.map(tech => (
+                                        <tr key={tech.id} className="hover:bg-blue-50/30 transition-colors">
+                                            <td className="px-6 py-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-black text-xs uppercase">
+                                                        {tech.name?.substring(0, 2) || '??'}
+                                                    </div>
+                                                    <span className="text-gray-900 font-black">{tech.name}</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 text-center">
+                                                <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-[10px] font-bold uppercase">
+                                                    {tech.position}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 text-center font-black text-gray-900">{tech.totalJobs} Servis</td>
+                                            <td className="px-6 py-4 text-right">
+                                                <p className="text-blue-600 font-black">{formatCurrency(tech.totalCommission)}</p>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {technicianData.length === 0 && (
+                                        <tr>
+                                            <td colSpan={4} className="py-20 text-center text-gray-400 font-bold uppercase tracking-widest bg-gray-50/30">
+                                                Belum ada data pekerjaan teknisi
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* Detailed Audit Trail */}
+                        {technicianData.length > 0 && (
+                            <div className="mt-8 space-y-4">
+                                <h3 className="text-sm font-black text-gray-900 uppercase italic tracking-tighter ml-2 flex items-center gap-2">
+                                    <EyeIcon className="w-4 h-4 text-primary" /> Detail Audit Pekerjaan
+                                </h3>
+                                <div className="bg-white rounded-[2.5rem] border border-gray-100 overflow-hidden shadow-sm">
+                                    <table className="w-full text-xs">
+                                        <thead className="bg-gray-50 text-gray-400 uppercase text-[9px] font-black">
+                                            <tr>
+                                                <th className="px-6 py-3 text-left">Waktu</th>
+                                                <th className="px-6 py-3 text-left">Teknisi</th>
+                                                <th className="px-6 py-3 text-left">Jasa</th>
+                                                <th className="px-6 py-3 text-left">Invoice</th>
+                                                <th className="px-6 py-3 text-right">Nilai Jasa</th>
+                                                <th className="px-6 py-3 text-right">Komisi</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-50">
+                                            {technicianData.flatMap(t => t.history).sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).map(item => (
+                                                <tr key={item.id} className="hover:bg-gray-50/50">
+                                                    <td className="px-6 py-3 text-gray-400">
+                                                        {new Date(item.created_at).toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                                                    </td>
+                                                    <td className="px-6 py-3 font-bold text-gray-700">{item.employee?.name}</td>
+                                                    <td className="px-6 py-3 text-gray-900">{item.item_name}</td>
+                                                    <td className="px-6 py-3 font-mono text-gray-500">{item.transaction?.invoice_number}</td>
+                                                    <td className="px-6 py-3 text-right text-gray-600 font-bold">{formatCurrency(item.subtotal)}</td>
+                                                    <td className="px-6 py-3 text-right font-black text-blue-600">{formatCurrency(item.commission_amount || 0)}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

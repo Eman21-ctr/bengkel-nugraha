@@ -324,3 +324,64 @@ export async function getDetailedTransactions(period: ReportPeriod, customStart?
 
     return data
 }
+
+// Technician Report
+export async function getTechnicianReport(period: ReportPeriod, customStart?: string, customEnd?: string) {
+    const supabase = await createClient()
+    const { start, end } = getDateRange(period, customStart, customEnd)
+
+    const { data, error } = await supabase
+        .from('transaction_items')
+        .select(`
+            id,
+            item_name,
+            qty,
+            subtotal,
+            commission_amount,
+            created_at,
+            performed_by,
+            employee:employees(id, name, position),
+            transaction:transactions!inner(invoice_number)
+        `)
+        .not('performed_by', 'is', null)
+        .gte('created_at', start.toISOString())
+        .lte('created_at', end.toISOString())
+        .order('created_at', { ascending: false })
+
+    if (error || !data) {
+        console.error('Error fetching technician report:', error)
+        return []
+    }
+
+    // Aggregate by technician
+    const aggregated: Record<string, {
+        id: string;
+        name: string;
+        position: string;
+        totalJobs: number;
+        totalCommission: number;
+        history: any[]
+    }> = {}
+
+    for (const item of data) {
+        const emp = (item as any).employee
+        if (!emp) continue
+
+        if (!aggregated[emp.id]) {
+            aggregated[emp.id] = {
+                id: emp.id,
+                name: emp.name,
+                position: emp.position,
+                totalJobs: 0,
+                totalCommission: 0,
+                history: []
+            }
+        }
+
+        aggregated[emp.id].totalJobs += 1
+        aggregated[emp.id].totalCommission += Number(item.commission_amount || 0)
+        aggregated[emp.id].history.push(item)
+    }
+
+    return Object.values(aggregated).sort((a, b) => b.totalCommission - a.totalCommission)
+}

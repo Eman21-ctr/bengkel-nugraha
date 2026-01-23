@@ -10,6 +10,8 @@ export type Service = {
     description: string | null
     barcode: string | null
     is_active: boolean
+    commission_type: 'percentage' | 'fixed'
+    commission_value: number
     created_at: string
     prices?: ServicePrice[]
 }
@@ -68,23 +70,58 @@ export async function createService(prevState: any, formData: FormData) {
 
     const name = formData.get('name') as string
     const description = formData.get('description') as string
-    const price = Number(formData.get('price')) || 0
-    const barcode = formData.get('barcode') as string || null
+    const commission_type = formData.get('commission_type') as 'percentage' | 'fixed' || 'fixed'
+    const commission_value = Number(formData.get('commission_value')) || 0
 
     if (!name) {
         return { error: 'Nama jasa wajib diisi' }
     }
 
-    const { error } = await supabase
+    // Insert service header
+    const { data: service, error } = await supabase
         .from('services')
-        .insert({ name, price, description, barcode, is_active: true })
+        .insert({
+            name,
+            price: 0, // Base price is deprecated
+            description,
+            commission_type,
+            commission_value,
+            is_active: true
+        })
+        .select()
+        .single()
 
     if (error) {
         console.error('Error creating service:', error)
         return { error: 'Gagal menambahkan jasa' }
     }
 
+    // Insert tiered prices
+    const vehicleTypes = ['R2', 'R3', 'R4']
+    const vehicleSizes = ['Kecil', 'Sedang', 'Besar', 'Jumbo']
+    const priceEntries: any[] = []
+
+    vehicleTypes.forEach(type => {
+        vehicleSizes.forEach(size => {
+            const price = Number(formData.get(`price_${type}_${size}`)) || 0
+            priceEntries.push({
+                service_id: service.id,
+                vehicle_type: type,
+                vehicle_size: size,
+                price: price
+            })
+        })
+    })
+
+    if (priceEntries.length > 0) {
+        const { error: priceError } = await supabase.from('service_prices').insert(priceEntries)
+        if (priceError) {
+            console.error('Error inserting service prices:', priceError)
+        }
+    }
+
     revalidatePath('/services')
+    revalidatePath('/transactions')
     return { success: true }
 }
 
@@ -121,9 +158,9 @@ export async function updateService(prevState: any, formData: FormData) {
 
     const id = formData.get('id') as string
     const name = formData.get('name') as string
-    const price = Number(formData.get('price')) || 0
     const description = formData.get('description') as string
-    const barcode = formData.get('barcode') as string || null
+    const commission_type = formData.get('commission_type') as 'percentage' | 'fixed' || 'fixed'
+    const commission_value = Number(formData.get('commission_value')) || 0
 
     if (!id || !name) {
         return { error: 'ID dan Nama jasa wajib diisi' }
@@ -131,7 +168,14 @@ export async function updateService(prevState: any, formData: FormData) {
 
     const { error } = await supabase
         .from('services')
-        .update({ name, price, description, barcode })
+        .update({
+            name,
+            description,
+            commission_type,
+            commission_value,
+            price: 0, // Ensure base price is 0
+            barcode: null // Remove barcode
+        })
         .eq('id', id)
 
     if (error) {
