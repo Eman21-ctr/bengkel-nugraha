@@ -121,11 +121,28 @@ export default function TransactionsPage() {
                 setCategories(catData || [])
                 const empData = await getEmployees()
                 setEmployees(empData || [])
+
+                // STICKY DEFAULTS LOGIC
+                // 1. Recover Note
+                const savedNote = localStorage.getItem('pos_receipt_note')
+                if (savedNote) setReceiptNote(savedNote)
+
+                // 2. Recover Cashier
+                const savedCashier = localStorage.getItem('pos_cashier_name')
+
                 const { data: { user } } = await createClient().auth.getUser()
                 if (user) {
-                    const { data: profile } = await createClient().from('profiles').select('full_name').eq('id', user.id).single()
-                    setUserProfile(profile)
-                    setSelectedCashierName(profile?.full_name || 'Admin')
+                    const { data: userP } = await createClient().from('profiles').select('full_name').eq('id', user.id).single()
+                    setUserProfile(userP)
+
+                    if (savedCashier) {
+                        setSelectedCashierName(savedCashier)
+                    } else {
+                        // Default to logged-in user if no sticky value
+                        setSelectedCashierName(userP?.full_name || 'Admin')
+                    }
+                } else if (savedCashier) {
+                    setSelectedCashierName(savedCashier)
                 }
             } catch (err) {
                 console.error('POS: Initial load error', err)
@@ -427,7 +444,8 @@ export default function TransactionsPage() {
         setPaymentAmount(0)
         setShowSuccess(false)
         setInvoiceNumber('')
-        setReceiptNote('')
+        // setReceiptNote('') <--- KNOCKED OUT (Review Request: Sticky Note)
+        // Cashier Name also remains sticky
     }
 
     const filteredServices = services.filter(s =>
@@ -929,13 +947,20 @@ export default function TransactionsPage() {
 
                                     <div>
                                         <label className="block text-[8px] font-black text-gray-400 uppercase tracking-widest mb-0.5 ml-1">NAMA KASIR</label>
-                                        <input
-                                            type="text"
+                                        <select
                                             value={selectedCashierName}
-                                            onChange={(e) => setSelectedCashierName(e.target.value)}
-                                            placeholder={userProfile?.full_name || 'Admin'}
-                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl py-1.5 px-3 text-[10px] font-bold text-gray-900 focus:border-primary focus:ring-0 transition-all placeholder:text-gray-200"
-                                        />
+                                            onChange={(e) => {
+                                                const val = e.target.value
+                                                setSelectedCashierName(val)
+                                                localStorage.setItem('pos_cashier_name', val)
+                                            }}
+                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl py-1.5 px-3 text-[10px] font-bold text-gray-900 focus:border-primary focus:ring-0 transition-all cursor-pointer uppercase"
+                                        >
+                                            <option value={userProfile?.full_name || 'Admin'}>{userProfile?.full_name || 'Admin'} (Default)</option>
+                                            {employees.map(emp => (
+                                                <option key={emp.id} value={emp.name}>{emp.name}</option>
+                                            ))}
+                                        </select>
                                     </div>
                                 </div>
 
@@ -944,7 +969,11 @@ export default function TransactionsPage() {
                                     <input
                                         type="text"
                                         value={receiptNote}
-                                        onChange={(e) => setReceiptNote(e.target.value)}
+                                        onChange={(e) => {
+                                            const val = e.target.value
+                                            setReceiptNote(val)
+                                            localStorage.setItem('pos_receipt_note', val)
+                                        }}
                                         placeholder="Terima kasih bosku!"
                                         className="w-full bg-gray-50 border border-gray-200 rounded-xl py-1.5 px-3 text-[10px] font-bold text-gray-900 focus:border-primary focus:ring-0 transition-all placeholder:text-gray-200"
                                     />
