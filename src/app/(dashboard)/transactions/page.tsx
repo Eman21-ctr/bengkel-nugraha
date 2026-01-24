@@ -196,7 +196,11 @@ export default function TransactionsPage() {
 
     // Add item to cart
     const addToCart = useCallback((item: Product | Service, type: 'product' | 'service', customVehicle?: typeof vehicleChoice) => {
-        const vehicleInfo = customVehicle || (selectedMember ? { type: selectedMember.vehicle_type as any, size: selectedMember.vehicle_size as any } : null)
+        // Check if member has valid vehicle data
+        const hasMemberVehicle = selectedMember?.vehicle_type && selectedMember?.vehicle_size
+
+        // Use member vehicle only if valid, otherwise force manual selection
+        const vehicleInfo = customVehicle || (hasMemberVehicle ? { type: selectedMember.vehicle_type as any, size: selectedMember.vehicle_size as any } : null)
 
         if (type === 'service' && !vehicleInfo) {
             setSelectingVehicleForService(item as Service)
@@ -212,15 +216,20 @@ export default function TransactionsPage() {
             // Apply special pricing for services
             if (type === 'service' && vehicleInfo) {
                 const service = item as Service
+                const vType = String(vehicleInfo.type).toUpperCase().trim()
+                const vSize = String(vehicleInfo.size).toUpperCase().trim()
+
                 const customPrice = service.prices?.find(p =>
-                    p.vehicle_type === vehicleInfo.type &&
-                    p.vehicle_size === vehicleInfo.size
+                    String(p.vehicle_type).toUpperCase().trim() === vType &&
+                    String(p.vehicle_size).toUpperCase().trim() === vSize
                 )
+
                 if (customPrice) {
                     price = Number(customPrice.price)
-                    console.log(`POS: Applied dynamic price for ${service.name}: ${price}`)
+                    console.log(`POS: Applied dynamic price for ${service.name}: ${price} (${vType} ${vSize})`)
                 } else {
                     price = 0 // Pure tiered pricing: if no match, price is 0
+                    console.warn(`POS: No matching price found for ${service.name} (${vType} ${vSize})`)
                 }
             }
 
@@ -352,8 +361,15 @@ export default function TransactionsPage() {
     }
 
     // Effect to update cart prices when member changes
+    // Effect to update cart prices when member changes
     useEffect(() => {
         if (cart.length === 0) return
+
+        // Skip update if selected member exists but has incomplete vehicle data
+        // This prevents overwriting manually selected prices with 0
+        if (selectedMember && (!selectedMember.vehicle_type || !selectedMember.vehicle_size)) {
+            return
+        }
 
         setCart(prev => prev.map(item => {
             if (item.type !== 'service') return item
@@ -363,9 +379,12 @@ export default function TransactionsPage() {
 
             let price = 0
             if (selectedMember) {
+                const vType = String(selectedMember.vehicle_type).toUpperCase().trim()
+                const vSize = String(selectedMember.vehicle_size).toUpperCase().trim()
+
                 const customPrice = service.prices?.find(p =>
-                    p.vehicle_type === selectedMember.vehicle_type &&
-                    p.vehicle_size === selectedMember.vehicle_size
+                    String(p.vehicle_type).toUpperCase().trim() === vType &&
+                    String(p.vehicle_size).toUpperCase().trim() === vSize
                 )
                 if (customPrice) {
                     price = Number(customPrice.price)
@@ -611,7 +630,7 @@ export default function TransactionsPage() {
                                                     <div>
                                                         <p className="font-black text-gray-900 leading-tight">{selectedMember?.name}</p>
                                                         <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-1">
-                                                            {selectedMember?.vehicle_plate || '-'} • {selectedMember?.vehicle_type} {selectedMember?.vehicle_size}
+                                                            {selectedMember?.vehicle_plate || '-'} • {(selectedMember?.vehicle_type && selectedMember?.vehicle_size) ? `${selectedMember.vehicle_type} ${selectedMember.vehicle_size}` : <span className="text-red-500 font-extrabold italic">(DATA KENDARAAN BELUM LENGKAP)</span>}
                                                         </p>
                                                     </div>
                                                 </div>
