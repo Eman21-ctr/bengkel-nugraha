@@ -278,8 +278,57 @@ export async function processTransaction(payload: TransactionPayload) {
                 .eq('id', payload.queue_id)
         }
 
+        // 6. Generate Service Reminders (NEW)
+        try {
+            const { data: memberData } = payload.member_id
+                ? await supabase.from('members').select('name, phone').eq('id', payload.member_id).single()
+                : { data: null };
+
+            const customerPhone = memberData?.phone || null;
+            const customerName = memberData?.name || 'Pelanggan Umum';
+
+            console.log(`POS Reminders: Generating for ${customerName} (${customerPhone || 'No Phone'})`)
+
+            const now = new Date()
+            const followUpDate = new Date(now)
+            followUpDate.setDate(now.getDate() + 3)
+
+            const serviceDate = new Date(now)
+            serviceDate.setMonth(now.getMonth() + 3)
+
+            const { error: reminderInsertError } = await supabase.from('service_reminders').insert([
+                {
+                    member_id: payload.member_id || null,
+                    customer_name: payload.member_id ? null : customerName,
+                    customer_phone: customerPhone,
+                    invoice_id: transaction.id,
+                    type: 'follow_up_3d',
+                    scheduled_date: followUpDate.toISOString(),
+                    status: 'pending'
+                },
+                {
+                    member_id: payload.member_id || null,
+                    customer_name: payload.member_id ? null : customerName,
+                    customer_phone: customerPhone,
+                    invoice_id: transaction.id,
+                    type: 'service_3m',
+                    scheduled_date: serviceDate.toISOString(),
+                    status: 'pending'
+                }
+            ])
+
+            if (reminderInsertError) {
+                console.error('POS Reminders: Insert error:', reminderInsertError)
+            } else {
+                console.log('POS Reminders: Success')
+            }
+        } catch (reminderErr) {
+            console.error('POS: Error generating reminders (silent fail):', reminderErr)
+        }
+
         revalidatePath('/transactions')
         revalidatePath('/inventory')
+        revalidatePath('/reminders')
         revalidatePath('/')
 
         return { success: true, invoice: transaction.invoice_number }

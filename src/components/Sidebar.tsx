@@ -11,7 +11,8 @@ import {
     DocumentChartBarIcon,
     Cog6ToothIcon,
     ArrowRightOnRectangleIcon,
-    ClockIcon
+    ClockIcon,
+    BellIcon
 } from '@heroicons/react/24/outline'
 import clsx from 'clsx'
 import { createClient } from '@/utils/supabase/client'
@@ -26,6 +27,7 @@ const navigation = [
     { name: 'Inventory', href: '/inventory', icon: CubeIcon, permission: 'menu:inventory' },
     { name: 'Jasa', href: '/services', icon: WrenchScrewdriverIcon, permission: 'menu:services' },
     { name: 'Membership', href: '/members', icon: UserGroupIcon, permission: 'menu:members' },
+    { name: 'Pengingat', href: '/reminders', icon: BellIcon, permission: 'menu:reports' }, // Using reports permission for now or *
     { name: 'Laporan', href: '/reports', icon: DocumentChartBarIcon, permission: 'menu:reports' },
     { name: 'Pengaturan', href: '/settings', icon: Cog6ToothIcon, permission: 'menu:settings' },
 ]
