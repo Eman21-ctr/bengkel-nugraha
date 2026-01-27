@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition, useEffect } from 'react'
-import { PlusIcon, MagnifyingGlassIcon, TrashIcon, CubeIcon, ExclamationTriangleIcon, ArchiveBoxArrowDownIcon, PencilIcon, XMarkIcon } from '@heroicons/react/24/outline'
+import { PlusIcon, MagnifyingGlassIcon, TrashIcon, CubeIcon, ExclamationTriangleIcon, ArchiveBoxArrowDownIcon, PencilIcon, XMarkIcon, AdjustmentsHorizontalIcon } from '@heroicons/react/24/outline'
 import { getProducts, getCategories, createProduct, deleteProduct, addStock, adjustStock, updateProduct, type Product, type Category } from './actions'
 import { useActionState } from 'react'
 import { useFormStatus } from 'react-dom'
@@ -178,7 +178,7 @@ export default function InventoryPage() {
                                         className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors cursor-pointer flex items-center gap-1 border border-orange-200"
                                         title="Penyesuaian Stok"
                                     >
-                                        <PencilIcon className="w-4 h-4" />
+                                        <AdjustmentsHorizontalIcon className="w-4 h-4" />
                                         <span className="text-xs font-medium hidden md:inline">Penyesuaian</span>
                                     </button>
                                     <button
