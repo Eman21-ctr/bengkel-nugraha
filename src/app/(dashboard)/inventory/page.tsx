@@ -338,7 +338,7 @@ function AddProductModal({ categories, onClose, onSuccess }: { categories: Categ
                                 <option value="dus">dus</option>
                                 <option value="set">set</option>
                                 <option value="jerigen">jerigen</option>
-                                <option value="cup">cup</option>
+
                                 <option value="drum">drum</option>
                             </select>
                         </div>
