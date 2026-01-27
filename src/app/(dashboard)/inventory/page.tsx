@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useEffect } from 'react'
 import { PlusIcon, MagnifyingGlassIcon, TrashIcon, CubeIcon, ExclamationTriangleIcon, ArchiveBoxArrowDownIcon, PencilIcon, XMarkIcon } from '@heroicons/react/24/outline'
-import { getProducts, getCategories, createProduct, deleteProduct, addStock, updateProduct, type Product, type Category } from './actions'
+import { getProducts, getCategories, createProduct, deleteProduct, addStock, adjustStock, updateProduct, type Product, type Category } from './actions'
 import { useActionState } from 'react'
 import { useFormStatus } from 'react-dom'
 import clsx from 'clsx'
@@ -14,6 +14,7 @@ export default function InventoryPage() {
     const [isStockModalOpen, setIsStockModalOpen] = useState(false)
     const [editingProduct, setEditingProduct] = useState<Product | null>(null)
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
+    const [isAdjustmentModalOpen, setIsAdjustmentModalOpen] = useState(false)
 
     const [searchQuery, setSearchQuery] = useState('')
     const [filterType, setFilterType] = useState('all') // all, low_stock
@@ -65,6 +66,11 @@ export default function InventoryPage() {
     function openStockModal(product: Product) {
         setSelectedProduct(product)
         setIsStockModalOpen(true)
+    }
+
+    function openAdjustmentModal(product: Product) {
+        setSelectedProduct(product)
+        setIsAdjustmentModalOpen(true)
     }
 
     function formatCurrency(amount: number) {
@@ -168,6 +174,14 @@ export default function InventoryPage() {
                                         <span className="text-xs font-medium hidden md:inline">Stok Masuk</span>
                                     </button>
                                     <button
+                                        onClick={() => openAdjustmentModal(product)}
+                                        className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors cursor-pointer flex items-center gap-1 border border-orange-200"
+                                        title="Penyesuaian Stok"
+                                    >
+                                        <PencilIcon className="w-4 h-4" />
+                                        <span className="text-xs font-medium hidden md:inline">Penyesuaian</span>
+                                    </button>
+                                    <button
                                         onClick={() => setEditingProduct(product)}
                                         className="p-2 text-gray-400 hover:text-primary transition-colors cursor-pointer"
                                         title="Edit Barang"
@@ -212,6 +226,17 @@ export default function InventoryPage() {
                     onClose={() => setIsStockModalOpen(false)}
                     onSuccess={() => {
                         setIsStockModalOpen(false)
+                        refreshData()
+                    }}
+                />
+            )}
+
+            {isAdjustmentModalOpen && selectedProduct && (
+                <StockAdjustmentModal
+                    product={selectedProduct}
+                    onClose={() => setIsAdjustmentModalOpen(false)}
+                    onSuccess={() => {
+                        setIsAdjustmentModalOpen(false)
                         refreshData()
                     }}
                 />
@@ -312,6 +337,9 @@ function AddProductModal({ categories, onClose, onSuccess }: { categories: Categ
                                 <option value="ikat">ikat</option>
                                 <option value="dus">dus</option>
                                 <option value="set">set</option>
+                                <option value="jerigen">jerigen</option>
+                                <option value="cup">cup</option>
+                                <option value="drum">drum</option>
                             </select>
                         </div>
 
@@ -403,6 +431,9 @@ function EditProductModal({ product, categories, onClose, onSuccess }: { product
                                     <option value="ikat">ikat</option>
                                     <option value="dus">dus</option>
                                     <option value="set">set</option>
+                                    <option value="jerigen">jerigen</option>
+                                    <option value="cup">cup</option>
+                                    <option value="drum">drum</option>
                                 </select>
                             </div>
                         </div>
@@ -462,6 +493,51 @@ function StockInModal({ product, onClose, onSuccess }: { product: Product, onClo
     )
 }
 
+
+function StockAdjustmentModal({ product, onClose, onSuccess }: { product: Product, onClose: () => void, onSuccess: () => void }) {
+    const [state, formAction] = useActionState(adjustStock, null)
+
+    return (
+        <div className="fixed inset-0 z-[100] overflow-y-auto" role="dialog" aria-modal="true">
+            <div className="fixed inset-0 bg-gray-500/75 transition-opacity" onClick={onClose}></div>
+            <div className="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
+                <div className="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-md p-6">
+                    <h3 className="text-lg font-medium leading-6 text-gray-900 mb-2">Penyesuaian Stok (Opname)</h3>
+                    <p className="text-sm text-gray-500 mb-4">{product.name} (Stok saat ini: {product.stock})</p>
+
+                    <form action={async (formData) => {
+                        await formAction(formData)
+                    }} className="space-y-4">
+                        <input type="hidden" name="product_id" value={product.id} />
+
+                        {state?.error && <p className="text-red-600 text-sm bg-red-50 p-2 rounded">{state.error}</p>}
+                        {state?.success && (
+                            <div className="text-green-600 text-sm bg-green-50 p-2 rounded">
+                                Berhasil diperbarui! {setTimeout(onSuccess, 500) && ""}
+                            </div>
+                        )}
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">Stok Akhir (Hasil Opname)</label>
+                            <input type="number" name="new_total" defaultValue={product.stock} min="0" required className="input-std" autoFocus />
+                            <p className="text-[10px] text-gray-400 mt-1 italic">* Masukkan jumlah total barang yang ada di gudang saat ini.</p>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">Keterangan</label>
+                            <input type="text" name="description" placeholder="Contoh: Stok opname bulanan / barang rusak" className="input-std" />
+                        </div>
+
+                        <div className="mt-6 flex gap-3 justify-end">
+                            <button type="button" onClick={onClose} className="btn-secondary">Batal</button>
+                            <SubmitButton label="Simpan Penyesuaian" />
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    )
+}
 
 function SubmitButton({ label }: { label: string }) {
     const { pending } = useFormStatus()

@@ -198,3 +198,48 @@ export async function updateProduct(prevState: any, formData: FormData) {
     revalidatePath('/transactions')
     return { success: true }
 }
+
+export async function adjustStock(prevState: any, formData: FormData) {
+    const supabase = await createClient()
+
+    const product_id = formData.get('product_id') as string
+    const new_total = Number(formData.get('new_total'))
+    const description = formData.get('description') as string
+
+    if (!product_id || isNaN(new_total) || new_total < 0) {
+        return { error: 'Data tidak valid' }
+    }
+
+    // 1. Get current stock
+    const { data: product } = await supabase.from('products').select('stock').eq('id', product_id).single()
+    if (!product) return { error: 'Produk tidak ditemukan' }
+
+    const stock_before = product.stock
+    const stock_after = new_total
+    const diff = stock_after - stock_before
+
+    // 2. Insert movement
+    const { error: moveError } = await supabase.from('stock_movements').insert({
+        product_id,
+        type: 'adjustment',
+        qty: Math.abs(diff),
+        stock_before,
+        stock_after,
+        description: description || 'Penyesuaian Stok (Opname)'
+    })
+
+    if (moveError) {
+        console.error('Adjustment Error:', moveError)
+        return { error: 'Gagal mencatat penyesuaian' }
+    }
+
+    // 3. Update product
+    const { error: updateError } = await supabase.from('products').update({ stock: stock_after }).eq('id', product_id)
+
+    if (updateError) {
+        return { error: 'Gagal update stok produk' }
+    }
+
+    revalidatePath('/inventory')
+    return { success: true }
+}
