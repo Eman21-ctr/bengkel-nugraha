@@ -1096,7 +1096,7 @@ export default function TransactionsPage() {
                     paymentAmount,
                     change: cleanChange,
                     member: selectedMember,
-                    cashier: userProfile?.full_name || 'Admin',
+                    cashier: selectedCashierName || userProfile?.full_name || 'Admin',
                     note: receiptNote
                 }}
             />

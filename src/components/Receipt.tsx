@@ -22,6 +22,7 @@ type ReceiptProps = {
         member?: {
             name: string
             points: number
+            vehicle_plate?: string | null // Added vehicle_plate
         } | null
         cashier?: string // New: Cashier name
         note?: string // New: Custom footer note
@@ -52,12 +53,11 @@ export function Receipt({ storeInfo, transaction, showOnScreen = false }: Receip
                     <span>{new Date(transaction.date).toLocaleDateString('id-ID')}</span>
                 </div>
                 <div className="flex justify-between">
-                    <span>{showOnScreen ? `Tipe: ${transaction.type.toUpperCase()}` : ''}</span>
                     <span>{new Date(transaction.date).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
                 {transaction.member && (
                     <div className="mt-1 border-t border-gray-100 pt-1">
-                        <span>Pelanggan: {transaction.member.name}</span>
+                        <span>Pelanggan: {transaction.type === 'bengkel' && transaction.member.vehicle_plate ? transaction.member.vehicle_plate : transaction.member.name}</span>
                     </div>
                 )}
                 {transaction.cashier && (
@@ -141,11 +141,7 @@ export function Receipt({ storeInfo, transaction, showOnScreen = false }: Receip
                 </div>
             )}
 
-            {transaction.member && showOnScreen && (
-                <div className="text-[9px] border-t border-b border-dashed border-black py-1 mb-2 text-center">
-                    <p>Total Poin: {transaction.member.points}</p>
-                </div>
-            )}
+            {/* Total Poin Removed */}
 
             {transaction.note && (
                 <div className="text-[9px] border-t border-dashed border-black pt-2 mb-2 italic text-center leading-tight">
