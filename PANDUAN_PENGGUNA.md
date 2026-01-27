@@ -1,103 +1,68 @@
-# PANDUAN PENGGUNAAN APLIKASI BENGKEL NUGRAHA
+# PANDUAN PENGGUNAAN APLIKASI BENGKEL NUGRAHA (v2026)
 
-Dokumen ini berisi panduan langkah demi langkah untuk menggunakan fitur-fitur utama aplikasi Bengkel Nugraha.
-
----
-
-## 1. SISTEM KASIR (POS)
-
-Halaman Kasir (`/transactions`) adalah pusat operasional harian. Berikut adalah alur penggunaannya:
-
-### A. Persiapan Transaksi
-1. **Pilih Mode Transaksi**:
-   - Klik tombol **BENGKEL** (Default) jika transaksi melibatkan jasa servis.
-   - Klik tombol **TOKO** jika hanya penjualan barang (sparepart/oli) tanpa servis.
-
-### B. Identifikasi Pelanggan (Member)
-*Langkah ini sangat penting agar fitur **Harga Pintar** dan **Poin Loyalitas** bekerja.*
-
-1. **Cari Member**: Ketik Nama, Plat Nomor, atau No HP di kolom "Cari Nama / No HP...".
-2. **Pilih Member**: Klik hasil pencarian yang sesuai.
-3. **Cek Data**:
-   - Kartu member akan muncul dengan latar hijau.
-   - Perhatikan **POIN** dan **VISIT** (kunjungan) member tersebut.
-   - Sistem membaca **Jenis Kendaraan** (Motor/Mobil) member untuk menentukan harga jasa.
-   - Jika member berhak dapat hadiah, notifikasi **KLAIM HADIAH** akan muncul berkedip.
-
-### C. Memilih Produk & Jasa
-1. **Cari Item**: Gunakan kolom pencarian di sebelah kanan (atau klik tombol **LIHAT KATALOG** pada tampilan HP).
-2. **Scan Barcode**: Jika menggunakan scanner, pastikan kursor aktif di kolom pencarian item.
-3. **Tambah ke Keranjang**:
-   - Klik tombol **(+)** pada item.
-   - **Logika Harga Cerdas**: Jika Anda memilih jasa (misal: Cuci), sistem otomatis mengecek kendaraan member. Jika member membawa Mobil (R4), harga jasa Cuci Mobil yang akan dipakai, bukan Cuci Motor.
-
-### D. Manajemen Keranjang (Cart)
-1. **Ubah Jumlah**: Ketik langsung angka di kolom "Qty" (kotak input putih) untuk mempercepat input jumlah banyak.
-2. **Hapus Item**: Klik ikon sampah merah di sebelah kanan item.
-3. **Diskon Poin**: (Otomatis) Jika member menukarkan poin, potongan harga akan muncul di ringkasan bayar.
-
-### E. Pembayaran (Checkout)
-1. **Pilih Metode**: Klik Tunai (Cash), QRIS, atau Transfer.
-2. **Input Bayar**:
-   - Untuk Tunai: Ketik nominal uang yang diterima pelanggan.
-   - Sistem otomatis menghitung **KEMBALIAN**.
-3. **Proses**: Pastikan semua data benar, lalu klik tombol besar **PROSES TRANSAKSI**.
-
-### F. Selesai
-1. **Cetak Struk**: Klik tombol **CETAK STRUK** untuk print nota ke printer thermal.
-2. **Transaksi Baru**: Klik tombol **DATA BARU** untuk mereset kasir dan melayani pelanggan berikutnya.
+Dokumen ini berisi panduan terbaru untuk mengelola Bengkel Nugraha dengan fitur-fitur canggih yang telah disempurnakan.
 
 ---
 
-## 2. MANAJEMEN JASA (SERVICE)
+## 1. SISTEM KASIR PINTAR (POS)
 
-Menu untuk mengatur daftar layanan dan harga dinamis.
+Halaman Kasir (`/transactions`) adalah jantung Bengkel Nugraha.
 
-1. **Harga Standar**: Harga dasar jasa jika tipe kendaraan tidak spesifik.
-2. **Harga Khusus (Dynamic Pricing)**:
-   - Edit Jasa -> Tab **HARGA PER KENDARAAN**.
-   - Input harga berbeda untuk **Motor (R2)**, **Roda Tiga (R3)**, dan **Mobil (R4)**.
-   - Kasir akan otomatis mengambil harga ini sesuai data kendaraan member.
+### A. Memulai Transaksi
+1. **Identitas Kasir & Nota**: Sistem sekarang otomatis mengingat Nama Kasir dan Catatan Nota terakhir (**Sticky Defaults**). Tidak perlu pilih ulang tiap kali transaksi baru.
+2. **Pilih Member**: Cari berdasarkan Nama/Plat/HP. 
+   - Jika member dipilih, sistem otomatis melihat **Jenis Kendaraan** member.
+   - Jika member tidak lengkap datanya, akan muncul tulisan merah **(DATA TIDAK LENGKAP)**. Segera lengkapi data member di menu Membership.
+3. **Pelanggan Umum**: Jika bukan member, saat memilih jasa akan muncul tombol **Pilih Kendaraan** (R2/R3/R4) agar harga akurat.
 
----
+### B. Menentukan Teknisi & Komisi
+Saat menambahkan **Jasa** ke keranjang, klik dropdown **"Petugas: Pilih..."** pada item tersebut untuk memilih siapa teknisi yang mengerjakan. Ini akan mencatat komisi teknisi secara otomatis.
 
-## 3. MANAJEMEN PENGGUNA (USERS)
-
-Menu **Pengaturan -> Pengguna** digunakan oleh Pemilik (Owner) untuk mengelola karyawan yang memiliki akses ke aplikasi.
-
-### A. Menambah Karyawan Baru
-1. Masuk ke halaman **Pengaturan** -> Tab **Pengguna**.
-2. Klik tombol **TAMBAH USER**.
-3. Isi form pendaftaran:
-   - **Nama Lengkap**: Nama karyawan (akan muncul di struk dan dashboard).
-   - **Nomor HP**: Masukkan nomor HP aktif (cth: 08123456789). **Nomor ini akan menjadi username untuk login**.
-   - **Password**: Buat password yang aman (minimal 6 karakter).
-   - **Peran (Role)**: Tentukan jabatan karyawan (misal: Kasir).
-4. Klik **Buat Akun Karyawan**.
-
-### B. Mengelola Hak Akses
-1. Di daftar pengguna, kolom **Peran** menunjukkan jabatan saat ini.
-2. Untuk mengubah jabatan, klik dropdown dan pilih peran baru (misal: dari Teknisi menjadi Admin), lalu konfirmasi.
-
-### C. Nonaktifkan Karyawan (Resign)
-Jika ada karyawan yang berhenti bekerja, **JANGAN hapus akunnya** (agar riwayat transaksi tetap aman), melainkan:
-1. Cari nama karyawan di daftar.
-2. Klik tombol status **AKTIF** (warna hijau).
-3. Konfirmasi untuk **Nonaktifkan**.
-4. Tombol akan berubah menjadi **NONAKTIF** (merah). Karyawan tersebut tidak akan bisa login lagi.
+### C. Pembayaran & Poin
+- **Tukar Poin**: Jika member punya poin, sistem akan menawarkan potongan harga otomatis.
+- **Termin (Cicilan)**: Bos bisa menerima pembayaran 0 (piutang) atau cicilan. Sisa saldo akan tercatat di laporan.
 
 ---
 
-## 4. AKUN SAYA & PROFIL
+## 2. MANAJEMEN JASA & HARGA 12-TIER
 
-Setiap pengguna (Owner maupun Karyawan) dapat mengatur profil pribadinya di menu **Pengaturan -> Akun Saya**.
+Sistem harga sekarang murni berdasarkan jenis dan ukuran kendaraan.
 
-1. **Ubah Nama Tampilan**:
-   - Klik ikon **Pensil**.
-   - Ganti nama sesuai keinginan.
-   - Nama ini yang akan muncul di sapaan Dashboard ("Selamat Pagi, [Nama]") dan di Struk transaksi.
-   
-2. **Ganti Password**:
-   - Klik ikon **Kunci**.
-   - Masukkan password baru dan konfirmasi.
-   - Disarankan mengganti password secara berkala untuk keamanan.
+1. **Input Harga Massal**: Saat mendaftarkan jasa baru, isi 12 kotak harga yang tersedia (Matriks R2, R3, R4 dikalikan 4 ukuran: Kecil, Sedang, Besar, Jumbo).
+2. **Komisi**: Atur nominal atau persentase komisi tepat di bawah form harga jasa.
+3. **Update Jasa Lama**: Jika harga jasa lama muncul Rp 0 di kasir, edit jasa tersebut > Tab **Harga Per Kendaraan** > Klik tombol **SIMPAN HARGA KHUSUS**.
+
+---
+
+## 3. PENGINGAT LAYANAN (AUTOMATIC CRM)
+
+Menu baru **Pengingat** (ikon Lonceng) membantu bos menjaga pelanggan agar tetap setia.
+
+1. **Jadwal Otomatis**: Setiap transaksi selesai, sistem membuat 2 jadwal:
+   - **Follow-up (3 Hari)**: Tanya kondisi kendaraan.
+   - **Servis Berkala (3 Bulan)**: Ingatkan ganti oli/servis.
+2. **Kirim via WhatsApp**: Klik tombol **Kirim WA** di dashboard Pengingat. Pesan manis sudah tersedia otomatis, tinggal klik 'Send' di WhatsApp.
+
+---
+
+## 4. INVENTORY & STOK OPNAME
+
+Kelola stok barang (Oli, Sparepart, dll) dengan lebih akurat.
+
+1. **Satuan Lengkap**: Tersedia satuan baru: **Jerigen, Cup, Drum**.
+2. **Penyesuaian Stok (Opname)**: 
+   - Klik ikon **Slider (Penyesuaian)** di daftar inventory.
+   - Masukkan **Stok Akhir** (jumlah barang yang benar-benar ada di rak saat ini). 
+   - Sistem akan menghitung selisihnya secara otomatis dan mencatatnya sebagai 'Adjustment' di riwayat.
+
+---
+
+## 5. LAPORAN & EXCEL
+
+Pantau kesehatan bisnis melalui menu **Laporan**.
+
+- **Export Excel**: Semua laporan (Penjualan, Stok, Piutang, Komisi Teknisi) dapat diunduh ke file Excel untuk pembukuan lebih lanjut.
+- **Laporan Teknisi**: Pantau kinerja tiap teknisi dan total komisi yang harus dibayarkan.
+
+---
+**Bengkel Nugraha - Solusi Profesional, Pelayanan Maksimal!** 🏎️💨💰🤝
