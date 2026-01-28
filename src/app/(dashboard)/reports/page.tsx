@@ -145,7 +145,7 @@ export default function ReportsPage() {
                     new Date(t.created_at).toLocaleString(),
                     t.type,
                     t.member?.name || 'Umum',
-                    t.profiles?.full_name || 'Admin',
+                    t.cashier_name || t.profiles?.full_name || 'Admin',
                     t.final_amount,
                     t.payment_method
                 ])
@@ -237,7 +237,7 @@ export default function ReportsPage() {
         { value: 'items', label: 'Laporan Per Item' },
         { value: 'stock', label: 'Laporan Stok' },
         { value: 'member', label: 'Laporan Member' },
-        { value: 'technician', label: 'Laporan Teknisi' }
+        { value: 'technician', label: 'Laporan Karyawan' }
     ]
 
     return (
@@ -610,7 +610,7 @@ export default function ReportsPage() {
                                                 <p className="text-gray-900">{tx.member?.name || '-'}</p>
                                                 {tx.member?.vehicle_plate && <p className="text-[10px] text-gray-400 font-bold uppercase">{tx.member.vehicle_plate}</p>}
                                             </td>
-                                            <td className="px-6 py-4 text-gray-500 italic">{tx.cashier?.full_name || '-'}</td>
+                                            <td className="px-6 py-4 text-gray-500 italic">{tx.cashier_name || tx.cashier?.full_name || '-'}</td>
                                             <td className="px-6 py-4 text-center">
                                                 <span className={clsx("px-2 py-1 rounded text-[10px] uppercase font-black", tx.type === 'bengkel' ? 'bg-orange-100 text-orange-600' : 'bg-blue-100 text-blue-600')}>
                                                     {tx.type}
@@ -671,7 +671,7 @@ export default function ReportsPage() {
                     <div className="space-y-6 animate-fade-in relative z-10">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <SummaryCard
-                                title="Total Teknisi"
+                                title="Total Karyawan"
                                 value={String(technicianData.length)}
                                 icon={UserIcon}
                                 color="blue"
@@ -694,7 +694,7 @@ export default function ReportsPage() {
                             <table className="w-full text-sm">
                                 <thead className="bg-gray-50 text-gray-500 uppercase text-[10px] font-bold">
                                     <tr>
-                                        <th className="px-6 py-4 text-left">Teknisi</th>
+                                        <th className="px-6 py-4 text-left">Karyawan</th>
                                         <th className="px-6 py-4 text-center">Posisi</th>
                                         <th className="px-6 py-4 text-center">Jml Pekerjaan</th>
                                         <th className="px-6 py-4 text-right">Total Komisi</th>
@@ -725,7 +725,7 @@ export default function ReportsPage() {
                                     {technicianData.length === 0 && (
                                         <tr>
                                             <td colSpan={4} className="py-20 text-center text-gray-400 font-bold uppercase tracking-widest bg-gray-50/30">
-                                                Belum ada data pekerjaan teknisi
+                                                Belum ada data pekerjaan karyawan
                                             </td>
                                         </tr>
                                     )}
@@ -744,7 +744,7 @@ export default function ReportsPage() {
                                         <thead className="bg-gray-50 text-gray-400 uppercase text-[9px] font-black">
                                             <tr>
                                                 <th className="px-6 py-3 text-left">Waktu</th>
-                                                <th className="px-6 py-3 text-left">Teknisi</th>
+                                                <th className="px-6 py-3 text-left">Karyawan</th>
                                                 <th className="px-6 py-3 text-left">Jasa</th>
                                                 <th className="px-6 py-3 text-left">Invoice</th>
                                                 <th className="px-6 py-3 text-right">Nilai Jasa</th>
@@ -816,7 +816,7 @@ export default function ReportsPage() {
                                     paymentAmount: Number(selectedTransaction.final_amount), // Simplified for re-print
                                     change: 0,
                                     member: selectedTransaction.member,
-                                    cashier: selectedTransaction.cashier?.full_name,
+                                    cashier: selectedTransaction.cashier_name || selectedTransaction.cashier?.full_name,
                                     paymentHistory: selectedTransaction.payments
                                 }}
                             />
@@ -856,7 +856,7 @@ export default function ReportsPage() {
                         paymentAmount: Number(selectedTransaction.final_amount),
                         change: 0,
                         member: selectedTransaction.member,
-                        cashier: selectedTransaction.cashier?.full_name,
+                        cashier: selectedTransaction.cashier_name || selectedTransaction.cashier?.full_name,
                         paymentHistory: selectedTransaction.payments
                     }}
                 />
@@ -1250,7 +1250,7 @@ function MemberHistoryModal({ member, onClose }: { member: any, onClose: () => v
                                                         <span className="text-gray-700 font-medium">{item.item_name} x{item.qty}</span>
                                                     </div>
                                                     {item.technician?.name && (
-                                                        <span className="text-[9px] text-gray-400 ml-3 block">🔧 Teknisi: {item.technician.name}</span>
+                                                        <span className="text-[9px] text-gray-400 ml-3 block">🔧 Karyawan: {item.technician.name}</span>
                                                     )}
                                                 </div>
                                                 <span className="font-bold text-gray-700 flex-shrink-0">{formatCurrency(item.subtotal)}</span>

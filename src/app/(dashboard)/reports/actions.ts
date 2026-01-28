@@ -326,7 +326,7 @@ export async function getDetailedTransactions(period: ReportPeriod, customStart?
     return data
 }
 
-// Technician Report
+// Employee Report (Laporan Karyawan)
 export async function getTechnicianReport(period: ReportPeriod, customStart?: string, customEnd?: string) {
     const supabase = await createClient()
     const { start, end } = getDateRange(period, customStart, customEnd)
