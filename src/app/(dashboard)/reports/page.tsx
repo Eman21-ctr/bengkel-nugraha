@@ -27,6 +27,7 @@ import {
     getCategorySalesDetail,
     getStockMovements,
     getMemberReport,
+    getMemberHistory,
     getDetailedTransactions,
     getTechnicianReport,
     type ReportPeriod
@@ -64,6 +65,7 @@ export default function ReportsPage() {
     const [selectedPaymentTx, setSelectedPaymentTx] = useState<any>(null)
     const [printingPayment, setPrintingPayment] = useState<any>(null)
     const [storeProfile, setStoreProfile] = useState({ name: '', address: '', phone: '' })
+    const [selectedMemberForHistory, setSelectedMemberForHistory] = useState<any>(null)
 
     const [isPending, startTransition] = useTransition()
 
@@ -528,6 +530,7 @@ export default function ReportsPage() {
                                             <th className="px-4 py-3 text-center">Kunjungan</th>
                                             <th className="px-4 py-3 text-left">No. HP</th>
                                             <th className="px-4 py-3 text-left">Bergabung</th>
+                                            <th className="px-4 py-3 text-center">Aksi</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-100">
@@ -556,9 +559,18 @@ export default function ReportsPage() {
                                                 <td className="px-4 py-4 text-gray-500 text-xs">
                                                     {new Date(m.created_at).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}
                                                 </td>
+                                                <td className="px-4 py-4 text-center">
+                                                    <button
+                                                        onClick={() => setSelectedMemberForHistory(m)}
+                                                        className="p-2 text-primary hover:bg-primary/10 rounded-lg transition-all cursor-pointer"
+                                                        title="Lihat Riwayat Servis"
+                                                    >
+                                                        <EyeIcon className="w-5 h-5" />
+                                                    </button>
+                                                </td>
                                             </tr>
                                         ))}
-                                        {memberData.members.length === 0 && <tr><td colSpan={6} className="py-12 text-center text-gray-400">Belum ada data member</td></tr>}
+                                        {memberData.members.length === 0 && <tr><td colSpan={7} className="py-12 text-center text-gray-400">Belum ada data member</td></tr>}
                                     </tbody>
                                 </table>
                             </div>
@@ -874,6 +886,14 @@ export default function ReportsPage() {
                     <PaymentReceipt storeInfo={storeProfile} payment={printingPayment} />
                 </div>
             )}
+
+            {/* Member History Modal */}
+            {selectedMemberForHistory && (
+                <MemberHistoryModal
+                    member={selectedMemberForHistory}
+                    onClose={() => setSelectedMemberForHistory(null)}
+                />
+            )}
         </div>
     )
 }
@@ -1076,6 +1096,118 @@ function PaymentHistoryModal({ transaction, onClose, onPrint }: { transaction: a
                         <p className="text-[10px] text-green-600 font-bold uppercase mt-1">Semua tagihan telah terbayar penuh</p>
                     </div>
                 )}
+            </div>
+        </div>
+    )
+}
+
+// Member Service History Modal (Rekam Servis)
+function MemberHistoryModal({ member, onClose }: { member: any, onClose: () => void }) {
+    const [history, setHistory] = useState<any[]>([])
+    const [isLoading, setIsLoading] = useState(true)
+
+    useEffect(() => {
+        async function load() {
+            setIsLoading(true)
+            const data = await getMemberHistory(member.id)
+            setHistory(data)
+            setIsLoading(false)
+        }
+        load()
+    }, [member.id])
+
+    const formatCurrency = (val: number) =>
+        new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(val)
+
+    return (
+        <div className="fixed inset-0 z-[100] overflow-y-auto" role="dialog" aria-modal="true">
+            <div className="fixed inset-0 bg-black/50 transition-opacity" onClick={onClose}></div>
+            <div className="flex min-h-full items-center justify-center p-4">
+                <div className="relative transform overflow-hidden rounded-[2rem] bg-white text-left shadow-2xl transition-all w-full max-w-3xl max-h-[90vh] flex flex-col">
+                    {/* Header */}
+                    <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-primary/5 to-blue-50">
+                        <div>
+                            <h3 className="text-lg font-black text-gray-900 uppercase tracking-wide">Riwayat Servis Member</h3>
+                            <p className="text-sm text-gray-500 mt-1">{member.name} • {member.phone}</p>
+                        </div>
+                        <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors cursor-pointer">
+                            <XMarkIcon className="w-6 h-6 text-gray-500" />
+                        </button>
+                    </div>
+
+                    {/* Summary */}
+                    <div className="p-4 border-b border-gray-100 bg-gray-50/50 flex flex-wrap gap-4">
+                        <div className="flex items-center gap-2 px-3 py-2 bg-white rounded-xl border border-gray-100">
+                            <UserIcon className="w-5 h-5 text-primary" />
+                            <span className="text-sm font-black text-gray-700">{member.visit_count || 0} Kunjungan</span>
+                        </div>
+                        <div className="flex items-center gap-2 px-3 py-2 bg-white rounded-xl border border-gray-100">
+                            <ChartBarIcon className="w-5 h-5 text-green-500" />
+                            <span className="text-sm font-black text-gray-700">{member.points} Poin</span>
+                        </div>
+                        <div className="flex items-center gap-2 px-3 py-2 bg-white rounded-xl border border-gray-100">
+                            <BanknotesIcon className="w-5 h-5 text-orange-500" />
+                            <span className="text-sm font-black text-gray-700">
+                                Total: {formatCurrency(history.reduce((sum, h) => sum + Number(h.final_amount || 0), 0))}
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* History List */}
+                    <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                        {isLoading ? (
+                            <div className="py-12 text-center">
+                                <ArrowPathIcon className="w-8 h-8 text-gray-300 animate-spin mx-auto" />
+                                <p className="text-sm text-gray-400 mt-2">Memuat riwayat...</p>
+                            </div>
+                        ) : history.length === 0 ? (
+                            <div className="py-12 text-center">
+                                <ShoppingCartIcon className="w-12 h-12 text-gray-200 mx-auto mb-2" />
+                                <p className="text-sm text-gray-400 font-bold">Belum ada riwayat transaksi</p>
+                            </div>
+                        ) : (
+                            history.map((tx) => (
+                                <div key={tx.id} className="bg-gray-50/50 border border-gray-100 rounded-2xl p-4 hover:shadow-md transition-all">
+                                    <div className="flex justify-between items-start mb-2">
+                                        <div>
+                                            <p className="font-black text-gray-900 text-sm">{tx.invoice_number}</p>
+                                            <p className="text-[10px] text-gray-400">
+                                                {new Date(tx.created_at).toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                                            </p>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="font-black text-primary text-lg">{formatCurrency(tx.final_amount)}</p>
+                                            <span className={clsx(
+                                                "px-2 py-0.5 rounded-full text-[8px] font-black uppercase",
+                                                tx.payment_status === 'Lunas' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                                            )}>
+                                                {tx.payment_status || 'Lunas'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    {/* Items */}
+                                    <div className="border-t border-gray-100 pt-2 mt-2 space-y-1">
+                                        {tx.items?.map((item: any, idx: number) => (
+                                            <div key={idx} className="flex justify-between text-xs">
+                                                <span className="text-gray-600">
+                                                    <span className={clsx(
+                                                        "inline-block w-1.5 h-1.5 rounded-full mr-1.5",
+                                                        item.item_type === 'service' ? 'bg-orange-400' : 'bg-blue-400'
+                                                    )}></span>
+                                                    {item.item_name} x{item.qty}
+                                                </span>
+                                                <span className="font-bold text-gray-700">{formatCurrency(item.subtotal)}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    {tx.cashier_name && (
+                                        <p className="text-[9px] text-gray-400 mt-2 italic">Kasir: {tx.cashier_name}</p>
+                                    )}
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </div>
             </div>
         </div>
     )

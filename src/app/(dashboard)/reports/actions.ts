@@ -386,3 +386,31 @@ export async function getTechnicianReport(period: ReportPeriod, customStart?: st
 
     return Object.values(aggregated).sort((a, b) => b.totalCommission - a.totalCommission)
 }
+
+// Member Service History (Rekam Servis)
+export async function getMemberHistory(memberId: string) {
+    const supabase = await createClient()
+
+    const { data, error } = await supabase
+        .from('transactions')
+        .select(`
+            id,
+            invoice_number,
+            type,
+            final_amount,
+            payment_method,
+            payment_status,
+            created_at,
+            cashier_name,
+            items:transaction_items(item_name, qty, subtotal, item_type)
+        `)
+        .eq('member_id', memberId)
+        .order('created_at', { ascending: false })
+
+    if (error) {
+        console.error('Error fetching member history:', error)
+        return []
+    }
+
+    return data
+}
