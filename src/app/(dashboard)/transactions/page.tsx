@@ -1003,7 +1003,7 @@ export default function TransactionsPage() {
                                 {/* Kilometer Input - Bengkel Only */}
                                 {txType === 'bengkel' && (
                                     <div>
-                                        <label className="block text-[8px] font-black text-gray-400 uppercase tracking-widest mb-0.5 ml-1">KILOMETER / ODOMETER (OPSIONAL)</label>
+                                        <label className="block text-[8px] font-black text-gray-400 uppercase tracking-widest mb-0.5 ml-1">KILOMETER (OPSIONAL)</label>
                                         <input
                                             type="number"
                                             value={kilometer}
