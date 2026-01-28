@@ -939,6 +939,7 @@ function PaymentHistoryModal({ transaction, onClose, onPrint }: { transaction: a
     const [amount, setAmount] = useState(0)
     const [method, setMethod] = useState('cash')
     const [note, setNote] = useState('')
+    const [savedPayment, setSavedPayment] = useState<any>(null) // New: track just-saved payment
 
     useEffect(() => {
         async function load() {
@@ -965,12 +966,34 @@ function PaymentHistoryModal({ transaction, onClose, onPrint }: { transaction: a
                 payment_method: method,
                 note
             })
-            onClose()
+            // Create the payment object for printing
+            const newPayment = {
+                id: `new-${Date.now()}`,
+                amount,
+                payment_method: method,
+                note,
+                created_at: new Date().toISOString(),
+                invoice_number: transaction.invoice_number,
+                member_name: transaction.member?.name || 'Umum',
+                total_tagihan: transaction.final_amount
+            }
+            setSavedPayment(newPayment) // Show success dialog instead of closing
         } catch (err) {
             alert('Gagal menyimpan pembayaran')
             console.error(err)
         }
         setIsSaving(false)
+    }
+
+    const handlePrintAndClose = () => {
+        if (savedPayment) {
+            onPrint(savedPayment)
+        }
+        onClose()
+    }
+
+    const handleCloseWithoutPrint = () => {
+        onClose()
     }
 
     const totalPaid = history.reduce((sum: number, p: any) => sum + Number(p.amount), 0)
@@ -982,7 +1005,36 @@ function PaymentHistoryModal({ transaction, onClose, onPrint }: { transaction: a
     return (
         <div className="fixed inset-0 z-[120] flex items-center justify-center bg-gray-900/80 backdrop-blur-sm p-4 overflow-y-auto">
             <div className="bg-white rounded-[2.5rem] p-8 max-w-xl w-full animate-bounce-in shadow-2xl my-auto relative border border-gray-100">
-                <button onClick={onClose} className="absolute top-8 right-8 p-2 hover:bg-gray-100 rounded-full transition-all">
+
+                {/* Success Overlay - shown after saving */}
+                {savedPayment && (
+                    <div className="absolute inset-0 bg-white rounded-[2.5rem] z-10 flex flex-col items-center justify-center p-8">
+                        <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6 animate-bounce">
+                            <CheckCircleIcon className="w-12 h-12 text-green-600" />
+                        </div>
+                        <h3 className="text-2xl font-black text-gray-900 mb-2 uppercase tracking-tight">Pembayaran Tersimpan!</h3>
+                        <p className="text-gray-500 text-sm mb-6 text-center">
+                            Pembayaran sebesar <span className="font-black text-primary">{formatCurrency(savedPayment.amount)}</span> berhasil dicatat.
+                        </p>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={handlePrintAndClose}
+                                className="flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-2xl font-bold hover:bg-primary/90 transition-all cursor-pointer"
+                            >
+                                <PrinterIcon className="w-5 h-5" />
+                                Cetak Struk
+                            </button>
+                            <button
+                                onClick={handleCloseWithoutPrint}
+                                className="px-6 py-3 bg-gray-100 text-gray-700 rounded-2xl font-bold hover:bg-gray-200 transition-all cursor-pointer"
+                            >
+                                Tutup
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                <button onClick={onClose} className="absolute top-8 right-8 p-2 hover:bg-gray-100 rounded-full transition-all cursor-pointer">
                     <XMarkIcon className="w-6 h-6 text-gray-400" />
                 </button>
 
