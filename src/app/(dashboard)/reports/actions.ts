@@ -402,6 +402,7 @@ export async function getMemberHistory(memberId: string) {
             payment_status,
             created_at,
             cashier_name,
+            kilometer,
             items:transaction_items(item_name, qty, subtotal, item_type)
         `)
         .eq('member_id', memberId)

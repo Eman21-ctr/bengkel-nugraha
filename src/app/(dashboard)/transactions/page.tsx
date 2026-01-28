@@ -80,6 +80,7 @@ export default function TransactionsPage() {
     const [paymentMethod, setPaymentMethod] = useState<'cash' | 'qris'>('cash')
     const [paymentAmount, setPaymentAmount] = useState<number>(0)
     const [receiptNote, setReceiptNote] = useState<string>('')
+    const [kilometer, setKilometer] = useState<number | ''>()
     const [showSuccess, setShowSuccess] = useState(false)
     const [invoiceNumber, setInvoiceNumber] = useState('')
     const [selectedCashierName, setSelectedCashierName] = useState<string>('')
@@ -438,7 +439,8 @@ export default function TransactionsPage() {
             payment_amount: paymentAmount,
             queue_id: selectedQueue?.id,
             note: receiptNote,
-            cashier_name: selectedCashierName || userProfile?.full_name || 'Admin'
+            cashier_name: selectedCashierName || userProfile?.full_name || 'Admin',
+            kilometer: txType === 'bengkel' && kilometer ? Number(kilometer) : undefined
         }
 
         const result = await processTransaction(payload)
@@ -997,6 +999,20 @@ export default function TransactionsPage() {
                                         className="w-full bg-gray-50 border border-gray-200 rounded-xl py-1.5 px-3 text-[10px] font-bold text-gray-900 focus:border-primary focus:ring-0 transition-all placeholder:text-gray-200"
                                     />
                                 </div>
+
+                                {/* Kilometer Input - Bengkel Only */}
+                                {txType === 'bengkel' && (
+                                    <div>
+                                        <label className="block text-[8px] font-black text-gray-400 uppercase tracking-widest mb-0.5 ml-1">KILOMETER / ODOMETER (OPSIONAL)</label>
+                                        <input
+                                            type="number"
+                                            value={kilometer}
+                                            onChange={(e) => setKilometer(e.target.value ? Number(e.target.value) : '')}
+                                            placeholder="Contoh: 45000"
+                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl py-1.5 px-3 text-[10px] font-bold text-gray-900 focus:border-primary focus:ring-0 transition-all placeholder:text-gray-200"
+                                        />
+                                    </div>
+                                )}
 
                                 <button
                                     onClick={handlePayment}

@@ -30,6 +30,7 @@ export type TransactionPayload = {
     queue_id?: string
     note?: string
     cashier_name?: string // New: manual cashier name
+    kilometer?: number // New: odometer reading
 }
 
 // Fetch products for POS
@@ -149,6 +150,7 @@ export async function processTransaction(payload: TransactionPayload) {
                 change: payload.payment_amount > payload.total ? payload.payment_amount - payload.total : 0,
                 note: payload.note || null,
                 cashier_name: payload.cashier_name || null,
+                kilometer: payload.kilometer || null,
                 payment_status: payload.payment_amount >= payload.total ? 'Lunas' : 'Belum Lunas'
             })
             .select('id, invoice_number')

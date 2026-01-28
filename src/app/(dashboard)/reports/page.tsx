@@ -1255,6 +1255,9 @@ function MemberHistoryModal({ member, onClose }: { member: any, onClose: () => v
                                     {tx.cashier_name && (
                                         <p className="text-[9px] text-gray-400 mt-2 italic">Kasir: {tx.cashier_name}</p>
                                     )}
+                                    {tx.kilometer && (
+                                        <p className="text-[9px] text-gray-400 mt-1 italic">🏎️ Kilometer: {tx.kilometer.toLocaleString('id-ID')} km</p>
+                                    )}
                                 </div>
                             ))
                         )}

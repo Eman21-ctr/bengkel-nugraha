@@ -29,6 +29,7 @@ type ReceiptProps = {
         cashier?: string // New: Cashier name
         note?: string // New: Custom footer note
         paymentHistory?: any[] // New: List of all payments for audit
+        kilometer?: number // New: Odometer reading
     }
     showOnScreen?: boolean
 }
@@ -80,6 +81,11 @@ export function Receipt({ storeInfo, transaction, showOnScreen = false }: Receip
                 {transaction.cashier && (
                     <div className="mt-1">
                         <span>Kasir: {transaction.cashier}</span>
+                    </div>
+                )}
+                {transaction.kilometer && (
+                    <div className="mt-1">
+                        <span>Kilometer: {transaction.kilometer.toLocaleString('id-ID')} km</span>
                     </div>
                 )}
             </div>
