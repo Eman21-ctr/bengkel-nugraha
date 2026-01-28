@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useTransition, useCallback } from 'react'
 import { Cog6ToothIcon, BuildingStorefrontIcon, GiftIcon, UserCircleIcon, ArrowRightOnRectangleIcon, UserGroupIcon, PlusIcon, BriefcaseIcon } from '@heroicons/react/24/outline'
-import { getStoreProfile, updateStoreProfile, getPointConfig, updatePointConfig, getCurrentUser, logout } from './actions'
+import { getStoreProfile, updateStoreProfile, uploadLogo, getPointConfig, updatePointConfig, getCurrentUser, logout } from './actions'
 import { useActionState } from 'react'
 import { useFormStatus } from 'react-dom'
 import { useRouter } from 'next/navigation'
@@ -18,7 +18,7 @@ type Tab = 'profile' | 'loyalty' | 'roles' | 'users' | 'employees' | 'account'
 
 export default function SettingsPage() {
     const [activeTab, setActiveTab] = useState<Tab>('profile')
-    const [storeProfile, setStoreProfile] = useState({ name: '', address: '', phone: '', owner: '' })
+    const [storeProfile, setStoreProfile] = useState({ name: '', address: '', phone: '', owner: '', logo_bengkel: '', logo_kafe: '' })
     const [pointConfig, setPointConfig] = useState({ earn_per: 10000, earn_point: 1, redeem_value: 100 })
     const [loyaltyConfig, setLoyaltyConfig] = useState({ visits_required: 10, reward_name: '' })
     const [roles, setRoles] = useState<Role[]>([])
@@ -134,12 +134,41 @@ export default function SettingsPage() {
 // Store Profile Form
 function StoreProfileForm({ initialData, onUpdate }: { initialData: any; onUpdate: () => void }) {
     const [state, formAction] = useActionState(updateStoreProfile, null)
+    const [uploadingBengkel, setUploadingBengkel] = useState(false)
+    const [uploadingKafe, setUploadingKafe] = useState(false)
+    const [logoBengkel, setLogoBengkel] = useState(initialData.logo_bengkel || '')
+    const [logoKafe, setLogoKafe] = useState(initialData.logo_kafe || '')
+
+    useEffect(() => {
+        setLogoBengkel(initialData.logo_bengkel || '')
+        setLogoKafe(initialData.logo_kafe || '')
+    }, [initialData])
 
     useEffect(() => {
         if (state?.success) {
             onUpdate()
         }
     }, [state, onUpdate])
+
+    const handleLogoUpload = async (file: File, type: 'bengkel' | 'kafe') => {
+        if (type === 'bengkel') setUploadingBengkel(true)
+        else setUploadingKafe(true)
+
+        const formData = new FormData()
+        formData.append('file', file)
+        formData.append('type', type)
+
+        const result = await uploadLogo(formData)
+
+        if (result.success && result.url) {
+            if (type === 'bengkel') setLogoBengkel(result.url)
+            else setLogoKafe(result.url)
+            onUpdate()
+        }
+
+        if (type === 'bengkel') setUploadingBengkel(false)
+        else setUploadingKafe(false)
+    }
 
     return (
         <div>
@@ -170,6 +199,74 @@ function StoreProfileForm({ initialData, onUpdate }: { initialData: any; onUpdat
 
                 <SubmitButton label="Simpan Profil" />
             </form>
+
+            {/* Logo Upload Section */}
+            <div className="mt-8 pt-6 border-t border-gray-200">
+                <h4 className="text-md font-bold text-gray-900 mb-4">Logo untuk Struk</h4>
+                <p className="text-sm text-gray-500 mb-4">Upload logo yang akan tampil di struk. Logo akan muncul di kiri dan kanan atas struk.</p>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Logo Bengkel */}
+                    <div className="space-y-3">
+                        <label className="block text-sm font-bold text-gray-700">Logo Bengkel (Kiri)</label>
+                        <div className="flex items-center gap-4">
+                            <div className="w-20 h-20 rounded-xl border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50 overflow-hidden">
+                                {logoBengkel ? (
+                                    <img src={logoBengkel} alt="Logo Bengkel" className="w-full h-full object-contain" />
+                                ) : (
+                                    <span className="text-[10px] text-gray-400 text-center">Belum ada</span>
+                                )}
+                            </div>
+                            <div>
+                                <label className="cursor-pointer inline-flex items-center gap-2 px-3 py-2 bg-orange-50 text-orange-600 rounded-lg text-xs font-bold hover:bg-orange-100 transition-all">
+                                    {uploadingBengkel ? 'Mengupload...' : '📷 Upload Logo'}
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        className="hidden"
+                                        disabled={uploadingBengkel}
+                                        onChange={(e) => {
+                                            const file = e.target.files?.[0]
+                                            if (file) handleLogoUpload(file, 'bengkel')
+                                        }}
+                                    />
+                                </label>
+                                <p className="text-[10px] text-gray-400 mt-1">PNG/JPG, max 1MB</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Logo Kafe */}
+                    <div className="space-y-3">
+                        <label className="block text-sm font-bold text-gray-700">Logo Kafe (Kanan)</label>
+                        <div className="flex items-center gap-4">
+                            <div className="w-20 h-20 rounded-xl border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50 overflow-hidden">
+                                {logoKafe ? (
+                                    <img src={logoKafe} alt="Logo Kafe" className="w-full h-full object-contain" />
+                                ) : (
+                                    <span className="text-[10px] text-gray-400 text-center">Belum ada</span>
+                                )}
+                            </div>
+                            <div>
+                                <label className="cursor-pointer inline-flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg text-xs font-bold hover:bg-blue-100 transition-all">
+                                    {uploadingKafe ? 'Mengupload...' : '📷 Upload Logo'}
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        className="hidden"
+                                        disabled={uploadingKafe}
+                                        onChange={(e) => {
+                                            const file = e.target.files?.[0]
+                                            if (file) handleLogoUpload(file, 'kafe')
+                                        }}
+                                    />
+                                </label>
+                                <p className="text-[10px] text-gray-400 mt-1">PNG/JPG, max 1MB</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     )
 }

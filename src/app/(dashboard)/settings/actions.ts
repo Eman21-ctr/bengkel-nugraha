@@ -16,19 +16,74 @@ export async function getStoreProfile() {
         name: 'Nugraha Bengkel & Kafe',
         address: '',
         phone: '',
-        owner: ''
+        owner: '',
+        logo_bengkel: '',
+        logo_kafe: ''
     }
+}
+
+// Upload logo to storage
+export async function uploadLogo(formData: FormData) {
+    const supabase = await createClient()
+    const file = formData.get('file') as File
+    const type = formData.get('type') as string // 'bengkel' or 'kafe'
+
+    if (!file || file.size === 0) {
+        return { error: 'No file provided' }
+    }
+
+    const fileExt = file.name.split('.').pop()
+    const fileName = `logo_${type}_${Date.now()}.${fileExt}`
+
+    // Upload to logos bucket
+    const { error: uploadError } = await supabase.storage
+        .from('logos')
+        .upload(fileName, file, { upsert: true })
+
+    if (uploadError) {
+        console.error('Error uploading logo:', uploadError)
+        return { error: 'Gagal mengupload logo' }
+    }
+
+    // Get public URL
+    const { data: { publicUrl } } = supabase.storage
+        .from('logos')
+        .getPublicUrl(fileName)
+
+    // Update store profile with new logo URL
+    const currentProfile = await getStoreProfile()
+    const updatedProfile = {
+        ...currentProfile,
+        [`logo_${type}`]: publicUrl
+    }
+
+    const { error: updateError } = await supabase
+        .from('settings')
+        .update({ value: updatedProfile })
+        .eq('key', 'store_profile')
+
+    if (updateError) {
+        return { error: 'Gagal menyimpan URL logo' }
+    }
+
+    revalidatePath('/settings')
+    return { success: true, url: publicUrl }
 }
 
 // Update store profile
 export async function updateStoreProfile(prevState: any, formData: FormData) {
     const supabase = await createClient()
 
+    // Get current profile to preserve logos
+    const currentProfile = await getStoreProfile()
+
     const profile = {
         name: formData.get('name') as string,
         address: formData.get('address') as string,
         phone: formData.get('phone') as string,
-        owner: formData.get('owner') as string
+        owner: formData.get('owner') as string,
+        logo_bengkel: currentProfile.logo_bengkel || '',
+        logo_kafe: currentProfile.logo_kafe || ''
     }
 
     const { error } = await supabase
@@ -44,6 +99,7 @@ export async function updateStoreProfile(prevState: any, formData: FormData) {
     revalidatePath('/settings')
     return { success: true }
 }
+
 
 // Get point config
 export async function getPointConfig() {

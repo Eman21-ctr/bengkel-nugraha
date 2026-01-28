@@ -7,6 +7,8 @@ type ReceiptProps = {
         name: string
         address: string
         phone: string
+        logo_bengkel?: string
+        logo_kafe?: string
     }
     transaction: {
         invoice: string
@@ -42,6 +44,21 @@ export function Receipt({ storeInfo, transaction, showOnScreen = false }: Receip
     return (
         <div id={showOnScreen ? undefined : "receipt-print"} className={containerClasses}>
             <div className="text-center border-b border-dashed border-black pb-2 mb-2">
+                {/* Logo Header */}
+                {(storeInfo.logo_bengkel || storeInfo.logo_kafe) && (
+                    <div className="flex justify-between items-center mb-2">
+                        <div className="w-12 h-12">
+                            {storeInfo.logo_bengkel && (
+                                <img src={storeInfo.logo_bengkel} alt="Logo Bengkel" className="w-full h-full object-contain" />
+                            )}
+                        </div>
+                        <div className="w-12 h-12">
+                            {storeInfo.logo_kafe && (
+                                <img src={storeInfo.logo_kafe} alt="Logo Kafe" className="w-full h-full object-contain" />
+                            )}
+                        </div>
+                    </div>
+                )}
                 <h2 className="text-lg font-bold uppercase tracking-tighter">{storeInfo.name}</h2>
                 <p className="text-[10px] leading-tight">{storeInfo.address}</p>
                 <p className="text-[10px]">Telp: {storeInfo.phone}</p>
