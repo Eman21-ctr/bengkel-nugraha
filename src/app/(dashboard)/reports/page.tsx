@@ -1238,26 +1238,35 @@ function MemberHistoryModal({ member, onClose }: { member: any, onClose: () => v
                                         </div>
                                     </div>
                                     {/* Items */}
-                                    <div className="border-t border-gray-100 pt-2 mt-2 space-y-1">
+                                    <div className="border-t border-gray-100 pt-2 mt-2 space-y-2">
                                         {tx.items?.map((item: any, idx: number) => (
-                                            <div key={idx} className="flex justify-between text-xs">
-                                                <span className="text-gray-600">
-                                                    <span className={clsx(
-                                                        "inline-block w-1.5 h-1.5 rounded-full mr-1.5",
-                                                        item.item_type === 'service' ? 'bg-orange-400' : 'bg-blue-400'
-                                                    )}></span>
-                                                    {item.item_name} x{item.qty}
-                                                </span>
-                                                <span className="font-bold text-gray-700">{formatCurrency(item.subtotal)}</span>
+                                            <div key={idx} className="flex justify-between items-start text-xs">
+                                                <div className="flex-1">
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span className={clsx(
+                                                            "inline-block w-1.5 h-1.5 rounded-full flex-shrink-0",
+                                                            item.item_type === 'service' ? 'bg-orange-400' : 'bg-blue-400'
+                                                        )}></span>
+                                                        <span className="text-gray-700 font-medium">{item.item_name} x{item.qty}</span>
+                                                    </div>
+                                                    {item.technician?.name && (
+                                                        <span className="text-[9px] text-gray-400 ml-3 block">🔧 Teknisi: {item.technician.name}</span>
+                                                    )}
+                                                </div>
+                                                <span className="font-bold text-gray-700 flex-shrink-0">{formatCurrency(item.subtotal)}</span>
                                             </div>
                                         ))}
                                     </div>
-                                    {tx.cashier_name && (
-                                        <p className="text-[9px] text-gray-400 mt-2 italic">Kasir: {tx.cashier_name}</p>
-                                    )}
-                                    {tx.kilometer && (
-                                        <p className="text-[9px] text-gray-400 mt-1 italic">🏎️ Kilometer: {tx.kilometer.toLocaleString('id-ID')} km</p>
-                                    )}
+
+                                    {/* Footer Info */}
+                                    <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3 pt-2 border-t border-gray-100">
+                                        {tx.cashier_name && (
+                                            <span className="text-[9px] text-gray-400 italic">👤 Kasir: {tx.cashier_name}</span>
+                                        )}
+                                        {tx.kilometer && (
+                                            <span className="text-[9px] text-gray-400 italic">🏎️ Kilometer: {tx.kilometer.toLocaleString('id-ID')} km</span>
+                                        )}
+                                    </div>
                                 </div>
                             ))
                         )}

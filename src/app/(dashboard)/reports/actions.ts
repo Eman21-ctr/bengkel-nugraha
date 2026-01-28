@@ -403,7 +403,14 @@ export async function getMemberHistory(memberId: string) {
             created_at,
             cashier_name,
             kilometer,
-            items:transaction_items(item_name, qty, subtotal, item_type)
+            items:transaction_items(
+                item_name, 
+                qty, 
+                subtotal, 
+                item_type,
+                performed_by,
+                technician:employees!transaction_items_performed_by_fkey(name)
+            )
         `)
         .eq('member_id', memberId)
         .order('created_at', { ascending: false })
