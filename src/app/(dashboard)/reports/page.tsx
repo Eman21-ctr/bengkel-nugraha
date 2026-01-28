@@ -525,6 +525,7 @@ export default function ReportsPage() {
                                             <th className="px-4 py-3 text-center w-16">Rank</th>
                                             <th className="px-4 py-3 text-left">Nama Member</th>
                                             <th className="px-4 py-3 text-center">Poin</th>
+                                            <th className="px-4 py-3 text-center">Kunjungan</th>
                                             <th className="px-4 py-3 text-left">No. HP</th>
                                             <th className="px-4 py-3 text-left">Bergabung</th>
                                         </tr>
@@ -550,13 +551,14 @@ export default function ReportsPage() {
                                                     <span className="font-black text-primary text-lg">{m.points}</span>
                                                     <p className="text-[10px] text-gray-400">pts</p>
                                                 </td>
+                                                <td className="px-4 py-4 text-center font-black text-gray-700">{m.visit_count || 0}x</td>
                                                 <td className="px-4 py-4 font-mono text-gray-600">{m.phone}</td>
                                                 <td className="px-4 py-4 text-gray-500 text-xs">
                                                     {new Date(m.created_at).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}
                                                 </td>
                                             </tr>
                                         ))}
-                                        {memberData.members.length === 0 && <tr><td colSpan={5} className="py-12 text-center text-gray-400">Belum ada data member</td></tr>}
+                                        {memberData.members.length === 0 && <tr><td colSpan={6} className="py-12 text-center text-gray-400">Belum ada data member</td></tr>}
                                     </tbody>
                                 </table>
                             </div>

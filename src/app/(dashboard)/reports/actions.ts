@@ -240,6 +240,7 @@ export async function getMemberReport() {
             name,
             phone,
             points,
+            visit_count,
             join_date,
             created_at
         `)
