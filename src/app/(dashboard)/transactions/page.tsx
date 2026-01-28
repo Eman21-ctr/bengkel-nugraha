@@ -1071,7 +1071,8 @@ export default function TransactionsPage() {
                                     change: cleanChange,
                                     member: selectedMember,
                                     cashier: selectedCashierName || userProfile?.full_name || 'Admin',
-                                    note: receiptNote
+                                    note: receiptNote,
+                                    kilometer: txType === 'bengkel' && kilometer ? Number(kilometer) : undefined
                                 }}
                             />
                         </div>
@@ -1113,7 +1114,8 @@ export default function TransactionsPage() {
                     change: cleanChange,
                     member: selectedMember,
                     cashier: selectedCashierName || userProfile?.full_name || 'Admin',
-                    note: receiptNote
+                    note: receiptNote,
+                    kilometer: txType === 'bengkel' && kilometer ? Number(kilometer) : undefined
                 }}
             />
 
