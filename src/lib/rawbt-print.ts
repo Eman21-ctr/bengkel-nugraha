@@ -3,7 +3,11 @@
 /**
  * RawBT Integration Utility
  * Untuk print ke printer thermal via RawBT di Android
+ * Optimized untuk printer 58mm (32 karakter per baris)
  */
+
+// Lebar printer thermal 58mm = 32 karakter
+const PRINTER_WIDTH = 32
 
 // Deteksi apakah device Android
 export function isAndroid(): boolean {
@@ -19,7 +23,6 @@ export function isMobile(): boolean {
 
 // Encode text ke format RawBT
 function encodeForRawBT(text: string): string {
-    // Base64 encode dengan support Unicode
     return btoa(unescape(encodeURIComponent(text)))
 }
 
@@ -28,8 +31,6 @@ export function printViaRawBT(text: string): boolean {
     try {
         const encoded = encodeForRawBT(text)
         const rawbtUrl = `rawbt:base64,${encoded}`
-
-        // Gunakan window.location untuk trigger RawBT
         window.location.href = rawbtUrl
         return true
     } catch (error) {
@@ -38,56 +39,49 @@ export function printViaRawBT(text: string): boolean {
     }
 }
 
-// Format angka ke Rupiah - ASCII only, no special chars
-function formatRupiah(amount: number): string {
-    // Format manual tanpa karakter khusus
+// Format angka ke Rupiah - ASCII only
+function formatRp(amount: number): string {
     const num = Math.round(amount)
     const str = num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')
     return `Rp${str}`
 }
 
-// Pad string ke kiri
-function padLeft(str: string, length: number): string {
-    return str.padStart(length, ' ')
+// Center text dalam lebar tertentu
+function center(text: string, width: number = PRINTER_WIDTH): string {
+    if (text.length >= width) return text.substring(0, width)
+    const pad = Math.floor((width - text.length) / 2)
+    return ' '.repeat(pad) + text
 }
 
-// Pad string ke kanan
-function padRight(str: string, length: number): string {
-    return str.padEnd(length, ' ')
-}
-
-// Center text - dengan word wrap untuk text panjang
-function centerText(text: string, width: number): string {
-    if (text.length <= width) {
-        const padding = Math.max(0, Math.floor((width - text.length) / 2))
-        return ' '.repeat(padding) + text
-    }
-    return text.substring(0, width) // Potong jika terlalu panjang
-}
-
-// Word wrap untuk text panjang, return array of centered lines
-function wrapAndCenterText(text: string, width: number): string[] {
-    const words = text.split(' ')
-    const lines: string[] = []
-    let currentLine = ''
-
-    for (const word of words) {
-        if ((currentLine + ' ' + word).trim().length <= width) {
-            currentLine = (currentLine + ' ' + word).trim()
-        } else {
-            if (currentLine) lines.push(centerText(currentLine, width))
-            currentLine = word
-        }
-    }
-    if (currentLine) lines.push(centerText(currentLine, width))
-
-    return lines
+// Format baris dengan label kiri dan value kanan
+function row(label: string, value: string, width: number = PRINTER_WIDTH): string {
+    const space = width - label.length - value.length
+    if (space < 1) return label + ' ' + value
+    return label + ' '.repeat(space) + value
 }
 
 // Potong text jika terlalu panjang
-function truncate(text: string, maxLength: number): string {
-    if (text.length <= maxLength) return text
-    return text.substring(0, maxLength - 2) + '..'
+function cut(text: string, max: number): string {
+    if (text.length <= max) return text
+    return text.substring(0, max - 2) + '..'
+}
+
+// Word wrap dan center untuk text panjang
+function wrapCenter(text: string, width: number = PRINTER_WIDTH): string[] {
+    const words = text.split(' ')
+    const lines: string[] = []
+    let line = ''
+
+    for (const word of words) {
+        if ((line + ' ' + word).trim().length <= width) {
+            line = (line + ' ' + word).trim()
+        } else {
+            if (line) lines.push(center(line, width))
+            line = word
+        }
+    }
+    if (line) lines.push(center(line, width))
+    return lines
 }
 
 type ReceiptData = {
@@ -115,124 +109,98 @@ type ReceiptData = {
     note?: string
 }
 
-// Generate struk dalam format plain text untuk thermal printer
+// Generate struk untuk thermal printer 58mm
 export function generateReceiptText(data: ReceiptData): string {
-    const W = 48 // Lebar karakter untuk thermal 80mm 
+    const W = PRINTER_WIDTH
     const LINE = '='.repeat(W)
     const DASH = '-'.repeat(W)
+    const out: string[] = []
 
-    const lines: string[] = []
+    // === HEADER ===
+    out.push(LINE)
+    out.push(center(data.storeName.toUpperCase()))
+    wrapCenter(data.storeAddress).forEach(l => out.push(l))
+    out.push(center(`Telp: ${data.storePhone}`))
+    out.push(LINE)
 
-    // Header
-    lines.push(LINE)
-    lines.push(centerText(data.storeName.toUpperCase(), W))
-
-    // Address - split jika panjang
-    const addressLines = wrapAndCenterText(data.storeAddress, W)
-    lines.push(...addressLines)
-
-    lines.push(centerText(`Telp: ${data.storePhone}`, W))
-    lines.push(LINE)
-
-    // Info transaksi
-    const dateStr = new Date(data.date).toLocaleDateString('id-ID', {
+    // === INFO TRANSAKSI ===
+    const tgl = new Date(data.date).toLocaleDateString('id-ID', {
         day: '2-digit', month: '2-digit', year: '2-digit'
     })
-    const timeStr = new Date(data.date).toLocaleTimeString('id-ID', {
+    const jam = new Date(data.date).toLocaleTimeString('id-ID', {
         hour: '2-digit', minute: '2-digit'
     })
 
-    lines.push(`No: ${data.invoice}`)
-    lines.push(`Tgl: ${dateStr} ${timeStr}`)
+    out.push(`No: ${data.invoice}`)
+    out.push(`Tgl: ${tgl} ${jam}`)
 
     if (data.member) {
-        const pelanggan = data.member.vehicle_plate || data.member.name
-        lines.push(`Plg: ${truncate(pelanggan, W - 5)}`)
+        const plg = data.member.vehicle_plate || data.member.name
+        out.push(`Plg: ${cut(plg, W - 5)}`)
     }
-
     if (data.cashier) {
-        lines.push(`Kasir: ${truncate(data.cashier, W - 7)}`)
+        out.push(`Kasir: ${cut(data.cashier, W - 7)}`)
     }
-
     if (data.kilometer) {
-        lines.push(`KM: ${data.kilometer.toLocaleString('id-ID')}`)
+        out.push(`KM: ${data.kilometer.toLocaleString('id-ID')}`)
     }
 
-    lines.push(DASH)
+    out.push(DASH)
 
-    // Items
+    // === ITEMS ===
     for (const item of data.items) {
-        // Nama item
-        lines.push(truncate(item.name, W))
+        out.push(cut(item.name, W))
 
-        // Teknisi (jika ada)
         if (item.employee_name) {
-            lines.push(`  [${truncate(item.employee_name, W - 4)}]`)
+            out.push(`  [${cut(item.employee_name, W - 4)}]`)
         }
 
-        // Qty x Harga = Subtotal
-        const priceStr = formatRupiah(item.price).replace('Rp', '')
-        const qtyPrice = `${item.qty}x${priceStr}`
-        const subtotalStr = formatRupiah(item.subtotal)
-        const spacing = W - qtyPrice.length - subtotalStr.length - 2
-        lines.push(`  ${qtyPrice}${' '.repeat(Math.max(1, spacing))}${subtotalStr}`)
+        // Qty x Harga      Subtotal
+        const qty = `${item.qty}x${formatRp(item.price).replace('Rp', '')}`
+        const sub = formatRp(item.subtotal)
+        out.push(row('  ' + qty, sub))
     }
 
-    lines.push(DASH)
+    out.push(DASH)
 
-    // Totals - format dengan spacing yang cukup
-    const subtotalLabel = 'Subtotal:'
-    const subtotalValue = formatRupiah(data.subtotal)
-    lines.push(`${subtotalLabel.padEnd(W - subtotalValue.length)}${subtotalValue}`)
+    // === TOTALS ===
+    out.push(row('Subtotal:', formatRp(data.subtotal)))
 
     if (data.discount > 0) {
-        const discLabel = 'Diskon:'
-        const discValue = `-${formatRupiah(data.discount)}`
-        lines.push(`${discLabel.padEnd(W - discValue.length)}${discValue}`)
+        out.push(row('Diskon:', `-${formatRp(data.discount)}`))
     }
 
-    const totalLabel = 'TOTAL:'
-    const totalValue = formatRupiah(data.total)
-    lines.push(`${totalLabel.padEnd(W - totalValue.length)}${totalValue}`)
+    out.push(row('TOTAL:', formatRp(data.total)))
 
-    lines.push(DASH)
+    out.push(DASH)
 
-    // Payment
-    const payMethod = data.paymentMethod === 'qris' ? 'QRIS' : 'TUNAI'
-    const bayarLabel = `Bayar (${payMethod}):`
-    const bayarValue = formatRupiah(data.paymentAmount)
-    lines.push(`${bayarLabel.padEnd(W - bayarValue.length)}${bayarValue}`)
+    // === PEMBAYARAN ===
+    const metode = data.paymentMethod === 'qris' ? 'QRIS' : 'TUNAI'
+    out.push(row(`Bayar(${metode}):`, formatRp(data.paymentAmount)))
 
     if (data.paymentAmount < data.total) {
-        const sisaLabel = 'SISA:'
-        const sisaValue = formatRupiah(data.total - data.paymentAmount)
-        lines.push(`${sisaLabel.padEnd(W - sisaValue.length)}${sisaValue}`)
+        out.push(row('SISA:', formatRp(data.total - data.paymentAmount)))
     } else if (data.change > 0) {
-        const kembaliLabel = 'Kembali:'
-        const kembaliValue = formatRupiah(data.change)
-        lines.push(`${kembaliLabel.padEnd(W - kembaliValue.length)}${kembaliValue}`)
+        out.push(row('Kembali:', formatRp(data.change)))
     }
 
-    lines.push(LINE)
+    out.push(LINE)
 
-    // Footer - gunakan catatan nota, atau default jika tidak ada
+    // === FOOTER ===
     if (data.note) {
-        // Wrap dan center catatan nota
-        const noteLines = wrapAndCenterText(data.note, W)
-        lines.push(...noteLines)
+        wrapCenter(data.note).forEach(l => out.push(l))
     } else {
-        // Default jika tidak ada catatan
-        lines.push(centerText('Terima Kasih!', W))
+        out.push(center('Terima Kasih!'))
     }
 
-    lines.push(LINE)
+    out.push(LINE)
 
-    // Beberapa baris kosong di akhir untuk paper feed
-    lines.push('')
-    lines.push('')
-    lines.push('')
+    // Paper feed
+    out.push('')
+    out.push('')
+    out.push('')
 
-    return lines.join('\n')
+    return out.join('\n')
 }
 
 type PaymentReceiptData = {
@@ -250,76 +218,66 @@ type PaymentReceiptData = {
     remaining: number
 }
 
-// Generate kwitansi pembayaran dalam format plain text
+// Generate kwitansi pembayaran
 export function generatePaymentReceiptText(data: PaymentReceiptData): string {
-    const W = 48 // Lebar karakter untuk thermal 80mm
+    const W = PRINTER_WIDTH
     const LINE = '='.repeat(W)
     const DASH = '-'.repeat(W)
+    const out: string[] = []
 
-    const lines: string[] = []
+    // === HEADER ===
+    out.push(LINE)
+    out.push(center(data.storeName.toUpperCase()))
+    wrapCenter(data.storeAddress).forEach(l => out.push(l))
+    out.push(center(`Telp: ${data.storePhone}`))
+    out.push(LINE)
 
-    // Header
-    lines.push(LINE)
-    lines.push(centerText(data.storeName.toUpperCase(), W))
-    const addressLines = wrapAndCenterText(data.storeAddress, W)
-    lines.push(...addressLines)
-    lines.push(centerText(`Telp: ${data.storePhone}`, W))
-    lines.push(LINE)
+    out.push(center('KWITANSI PEMBAYARAN'))
+    out.push(DASH)
 
-    lines.push(centerText('KWITANSI PEMBAYARAN', W))
-    lines.push(DASH)
-
-    // Info
-    const dateStr = new Date(data.date).toLocaleDateString('id-ID')
-    const timeStr = new Date(data.date).toLocaleTimeString('id-ID', {
+    // === INFO ===
+    const tgl = new Date(data.date).toLocaleDateString('id-ID')
+    const jam = new Date(data.date).toLocaleTimeString('id-ID', {
         hour: '2-digit', minute: '2-digit'
     })
 
-    lines.push(`Ref: ${data.invoice}`)
-    lines.push(`Tgl: ${dateStr} ${timeStr}`)
+    out.push(`Ref: ${data.invoice}`)
+    out.push(`Tgl: ${tgl} ${jam}`)
 
     if (data.member) {
-        lines.push(`Plg: ${truncate(data.member.name, W - 5)}`)
+        out.push(`Plg: ${cut(data.member.name, W - 5)}`)
     }
 
-    lines.push(DASH)
+    out.push(DASH)
 
-    // Detail
-    const method = data.method === 'qris' ? 'QRIS' : 'TUNAI'
-    lines.push(`Metode: ${method}`)
-    lines.push(`Ket: ${data.note || 'Angsuran'}`)
+    // === DETAIL ===
+    const metode = data.method === 'qris' ? 'QRIS' : 'TUNAI'
+    out.push(`Metode: ${metode}`)
+    out.push(`Ket: ${data.note || 'Angsuran'}`)
 
-    lines.push(DASH)
+    out.push(DASH)
 
-    // Amount
-    const dibayarLabel = 'DIBAYAR:'
-    const dibayarValue = formatRupiah(data.amount)
-    lines.push(`${dibayarLabel.padEnd(W - dibayarValue.length)}${dibayarValue}`)
+    // === JUMLAH ===
+    out.push(row('DIBAYAR:', formatRp(data.amount)))
 
-    lines.push(DASH)
+    out.push(DASH)
 
-    // Summary
-    const totalLabel = 'Total Tagihan:'
-    const totalValue = formatRupiah(data.totalBill)
-    lines.push(`${totalLabel.padEnd(W - totalValue.length)}${totalValue}`)
+    // === SUMMARY ===
+    out.push(row('Total Tagihan:', formatRp(data.totalBill)))
+    out.push(row('Sudah Bayar:', formatRp(data.paidSoFar)))
 
-    const paidLabel = 'Sudah Bayar:'
-    const paidValue = formatRupiah(data.paidSoFar)
-    lines.push(`${paidLabel.padEnd(W - paidValue.length)}${paidValue}`)
+    const sisaVal = data.remaining <= 0 ? 'LUNAS' : formatRp(data.remaining)
+    out.push(row('SISA:', sisaVal))
 
-    const remainLabel = 'SISA:'
-    const remainValue = data.remaining <= 0 ? 'LUNAS' : formatRupiah(data.remaining)
-    lines.push(`${remainLabel.padEnd(W - remainValue.length)}${remainValue}`)
-
-    lines.push(LINE)
-    lines.push(centerText('Simpan sebagai bukti', W))
-    lines.push(centerText('pembayaran yang sah', W))
-    lines.push(LINE)
+    out.push(LINE)
+    out.push(center('Simpan sebagai bukti'))
+    out.push(center('pembayaran yang sah'))
+    out.push(LINE)
 
     // Paper feed
-    lines.push('')
-    lines.push('')
-    lines.push('')
+    out.push('')
+    out.push('')
+    out.push('')
 
-    return lines.join('\n')
+    return out.join('\n')
 }
