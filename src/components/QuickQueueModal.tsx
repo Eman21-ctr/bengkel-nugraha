@@ -6,6 +6,7 @@ import { createQuickQueue } from '../app/(dashboard)/queues/actions'
 import { getMembers } from '../app/(dashboard)/members/actions'
 import { getStoreProfile } from '../app/(dashboard)/settings/actions'
 import { QueueTicket } from './QueueTicket'
+import { isAndroid, printViaRawBT, generateQueueTicketText } from '@/lib/rawbt-print'
 
 type QuickQueueModalProps = {
     isOpen: boolean
@@ -71,11 +72,25 @@ export default function QuickQueueModal({ isOpen, onClose, onSuccess }: QuickQue
     }
 
     const handlePrint = () => {
-        document.body.classList.add('is-printing-ticket')
-        window.print()
-        setTimeout(() => {
-            document.body.classList.remove('is-printing-ticket')
-        }, 500)
+        if (isAndroid()) {
+            const ticketText = generateQueueTicketText({
+                storeName: storeInfo.name,
+                queueNumber: successData.queue_number,
+                date: new Date(),
+                customerName: successData.member?.name,
+                notes: successData.notes
+            })
+            const success = printViaRawBT(ticketText)
+            if (!success) {
+                alert('Gagal mengirim ke RawBT. Pastikan aplikasi RawBT sudah terinstall.')
+            }
+        } else {
+            document.body.classList.add('is-printing-ticket')
+            window.print()
+            setTimeout(() => {
+                document.body.classList.remove('is-printing-ticket')
+            }, 500)
+        }
     }
 
     if (!isOpen) return null

@@ -17,6 +17,7 @@ import { getStoreProfile } from '../settings/actions'
 import { useActionState } from 'react'
 import clsx from 'clsx'
 import { MemberCard } from '@/components/MemberCard'
+import { isAndroid, printViaRawBT, generateMemberCardText } from '@/lib/rawbt-print'
 
 type Member = {
     id: string
@@ -73,15 +74,29 @@ export default function MembersPage() {
     }
 
     const handlePrintCard = (member: Member) => {
-        setSelectedMemberForCard(member)
-        // More robust timeout for mobile rendering (barcode generation)
-        setTimeout(() => {
-            document.body.classList.add('is-printing-member-card')
-            window.print()
+        if (isAndroid()) {
+            const cardText = generateMemberCardText({
+                storeName: storeInfo.name,
+                memberCode: member.member_code,
+                name: member.name,
+                phone: member.phone,
+                vehiclePlate: member.vehicle_plate
+            })
+            const success = printViaRawBT(cardText)
+            if (!success) {
+                alert('Gagal mengirim ke RawBT. Pastikan aplikasi RawBT sudah terinstall.')
+            }
+        } else {
+            setSelectedMemberForCard(member)
+            // More robust timeout for mobile rendering (barcode generation)
             setTimeout(() => {
-                document.body.classList.remove('is-printing-member-card')
+                document.body.classList.add('is-printing-member-card')
+                window.print()
+                setTimeout(() => {
+                    document.body.classList.remove('is-printing-member-card')
+                }, 1000)
             }, 1000)
-        }, 1000)
+        }
     }
 
     return (

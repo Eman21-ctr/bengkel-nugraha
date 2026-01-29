@@ -156,7 +156,8 @@ export function generateReceiptText(data: ReceiptData): string {
         }
 
         // Qty x Harga      Subtotal
-        const qty = `${item.qty}x${formatRp(item.price).replace('Rp', '')}`
+        const priceStr = formatRp(item.price).replace('Rp', '')
+        const qty = `${item.qty}x${priceStr}`
         const sub = formatRp(item.subtotal)
         out.push(row('  ' + qty, sub))
     }
@@ -202,6 +203,104 @@ export function generateReceiptText(data: ReceiptData): string {
 
     return out.join('\n')
 }
+
+type QueueTicketData = {
+    storeName: string
+    queueNumber: string
+    date: Date
+    customerName?: string | null
+    notes?: string | null
+}
+
+// Generate tiket antrean
+export function generateQueueTicketText(data: QueueTicketData): string {
+    const W = PRINTER_WIDTH
+    const LINE = '='.repeat(W)
+    const DASH = '-'.repeat(W)
+    const out: string[] = []
+
+    out.push(LINE)
+    out.push(center(data.storeName.toUpperCase()))
+    out.push(LINE)
+    out.push('')
+    out.push(center('NOMOR ANTREAN'))
+    out.push('')
+    // Big number effect using dashes
+    out.push(center('--- ' + data.queueNumber + ' ---'))
+    out.push('')
+    out.push(DASH)
+
+    const tgl = new Date(data.date).toLocaleDateString('id-ID', {
+        day: '2-digit', month: '2-digit', year: '2-digit'
+    })
+    const jam = new Date(data.date).toLocaleTimeString('id-ID', {
+        hour: '2-digit', minute: '2-digit'
+    })
+
+    out.push(center(`${tgl} ${jam}`))
+
+    if (data.customerName) {
+        out.push(center(cut(data.customerName, W)))
+    }
+
+    if (data.notes) {
+        out.push('')
+        wrapCenter(data.notes).forEach(l => out.push(l))
+    }
+
+    out.push('')
+    out.push(center('Harap tunggu panggilan'))
+    out.push(LINE)
+
+    out.push('')
+    out.push('')
+    out.push('')
+
+    return out.join('\n')
+}
+
+type MemberCardData = {
+    storeName: string
+    memberCode: string
+    name: string
+    phone: string
+    vehiclePlate?: string | null
+}
+
+// Generate layout kartu member
+export function generateMemberCardText(data: MemberCardData): string {
+    const W = PRINTER_WIDTH
+    const LINE = '='.repeat(W)
+    const DASH = '-'.repeat(W)
+    const out: string[] = []
+
+    out.push(LINE)
+    out.push(center('KARTU MEMBER'))
+    out.push(center(data.storeName.toUpperCase()))
+    out.push(LINE)
+    out.push('')
+    out.push(center(data.name.toUpperCase()))
+    out.push(center(data.phone))
+    if (data.vehiclePlate) {
+        out.push(center('PLAT: ' + data.vehiclePlate.toUpperCase()))
+    }
+    out.push('')
+    out.push(DASH)
+    out.push(center('KODE MEMBER:'))
+    out.push(center(data.memberCode))
+    out.push(DASH)
+    out.push('')
+    out.push(center('Tunjukkan kartu ini saat'))
+    out.push(center('berkunjung untuk poin'))
+    out.push(LINE)
+
+    out.push('')
+    out.push('')
+    out.push('')
+
+    return out.join('\n')
+}
+
 
 type PaymentReceiptData = {
     storeName: string
