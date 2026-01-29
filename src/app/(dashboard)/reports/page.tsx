@@ -35,6 +35,7 @@ import {
 import { getPaymentHistory, addPaymentRecord } from '../transactions/actions'
 import { getStoreProfile } from '../settings/actions'
 import clsx from 'clsx'
+import { isAndroid, printViaRawBT, generateReceiptText, generatePaymentReceiptText } from '@/lib/rawbt-print'
 
 type ReportType = 'sales' | 'items' | 'stock' | 'member' | 'transactions' | 'technician'
 
@@ -193,9 +194,12 @@ export default function ReportsPage() {
         XLSX.writeFile(wb, `${filename}.xlsx`)
     }
 
-    // Handle printing specific payment
+    // Handle printing specific payment - Support RawBT for Android
     const handlePrintPayment = (payment: any, tx: any) => {
-        setPrintingPayment({
+        const paymentData = {
+            storeName: storeProfile.name,
+            storeAddress: storeProfile.address,
+            storePhone: storeProfile.phone,
             invoice: tx.invoice_number,
             date: new Date(payment.created_at),
             method: payment.payment_method,
@@ -205,23 +209,69 @@ export default function ReportsPage() {
             paidSoFar: tx.payments.filter((p: any) => new Date(p.created_at) <= new Date(payment.created_at)).reduce((sum: number, p: any) => sum + Number(p.amount), 0),
             remaining: Number(tx.final_amount) - tx.payments.filter((p: any) => new Date(p.created_at) <= new Date(payment.created_at)).reduce((sum: number, p: any) => sum + Number(p.amount), 0),
             member: tx.member
-        })
-        setTimeout(() => {
-            document.body.classList.add('is-printing-payment')
-            window.print()
+        }
+
+        if (isAndroid()) {
+            const receiptText = generatePaymentReceiptText(paymentData)
+            const success = printViaRawBT(receiptText)
+            if (!success) {
+                alert('Gagal mengirim ke RawBT. Pastikan aplikasi RawBT sudah terinstall.')
+            }
+        } else {
+            setPrintingPayment(paymentData)
             setTimeout(() => {
-                document.body.classList.remove('is-printing-payment')
-                setPrintingPayment(null)
-            }, 500)
-        }, 300)
+                document.body.classList.add('is-printing-payment')
+                window.print()
+                setTimeout(() => {
+                    document.body.classList.remove('is-printing-payment')
+                    setPrintingPayment(null)
+                }, 500)
+            }, 300)
+        }
     }
 
+    // Handle print receipt - Support RawBT for Android
     const handlePrintReceipt = () => {
-        document.body.classList.add('is-printing-receipt')
-        window.print()
-        setTimeout(() => {
-            document.body.classList.remove('is-printing-receipt')
-        }, 500)
+        if (!selectedTransaction) return
+
+        const receiptData = {
+            storeName: storeProfile.name,
+            storeAddress: storeProfile.address,
+            storePhone: storeProfile.phone,
+            invoice: selectedTransaction.invoice_number,
+            date: new Date(selectedTransaction.created_at),
+            member: selectedTransaction.member,
+            cashier: selectedTransaction.cashier_name || selectedTransaction.cashier?.full_name,
+            kilometer: selectedTransaction.kilometer,
+            items: selectedTransaction.items.map((it: any) => ({
+                name: it.item_name,
+                qty: it.qty,
+                price: Number(it.price),
+                subtotal: Number(it.subtotal),
+                employee_name: it.employee_name
+            })),
+            subtotal: Number(selectedTransaction.final_amount) + Number(selectedTransaction.discount_amount),
+            discount: Number(selectedTransaction.discount_amount),
+            total: Number(selectedTransaction.final_amount),
+            paymentMethod: selectedTransaction.payment_method,
+            paymentAmount: Number(selectedTransaction.final_amount),
+            change: 0,
+            note: selectedTransaction.note
+        }
+
+        if (isAndroid()) {
+            const receiptText = generateReceiptText(receiptData)
+            const success = printViaRawBT(receiptText)
+            if (!success) {
+                alert('Gagal mengirim ke RawBT. Pastikan aplikasi RawBT sudah terinstall.')
+            }
+        } else {
+            document.body.classList.add('is-printing-receipt')
+            window.print()
+            setTimeout(() => {
+                document.body.classList.remove('is-printing-receipt')
+            }, 500)
+        }
     }
 
     const periodOptions: { value: ReportPeriod; label: string }[] = [

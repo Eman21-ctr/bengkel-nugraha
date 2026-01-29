@@ -42,6 +42,7 @@ import QueueSidebar from '@/components/QueueSidebar'
 import QueueDropdown from '@/components/QueueDropdown'
 import QuickQueueModal from '@/components/QuickQueueModal'
 import { type Queue, linkQueueToTransaction } from '../queues/actions'
+import { isAndroid, printViaRawBT, generateReceiptText } from '@/lib/rawbt-print'
 
 type Product = { id: string; name: string; category_id: string; price: number; cost_price: number; stock: number; min_stock: number; unit: string; barcode?: string | null }
 type ServicePrice = { vehicle_type: string; vehicle_size: string; price: number }
@@ -396,14 +397,49 @@ export default function TransactionsPage() {
         }))
     }, [selectedMember, services])
 
-    // Handle print
+    // Handle print - Support RawBT for Android thermal printers
     const handlePrint = () => {
-        document.body.classList.add('is-printing-receipt')
-        window.print()
-        // Penundaan kecil untuk memastikan window.print() selesai memicu dialog sebelum class dihapus
-        setTimeout(() => {
-            document.body.classList.remove('is-printing-receipt')
-        }, 500)
+        // Prepare receipt data
+        const receiptData = {
+            storeName: storeProfile.name,
+            storeAddress: storeProfile.address,
+            storePhone: storeProfile.phone,
+            invoice: invoiceNumber,
+            date: new Date(),
+            member: selectedMember,
+            cashier: selectedCashierName || userProfile?.full_name || 'Admin',
+            kilometer: txType === 'bengkel' && kilometer ? Number(kilometer) : undefined,
+            items: cart.map(item => ({
+                name: item.name,
+                qty: item.qty,
+                price: item.price,
+                subtotal: item.subtotal,
+                employee_name: employees.find(e => e.id === item.employee_id)?.name
+            })),
+            subtotal: cleanSubtotal,
+            discount: pointDiscount,
+            total: finalTotal,
+            paymentMethod,
+            paymentAmount,
+            change: cleanChange,
+            note: receiptNote
+        }
+
+        // Check if on Android - use RawBT
+        if (isAndroid()) {
+            const receiptText = generateReceiptText(receiptData)
+            const success = printViaRawBT(receiptText)
+            if (!success) {
+                alert('Gagal mengirim ke RawBT. Pastikan aplikasi RawBT sudah terinstall.')
+            }
+        } else {
+            // Desktop/iOS fallback - use browser print
+            document.body.classList.add('is-printing-receipt')
+            window.print()
+            setTimeout(() => {
+                document.body.classList.remove('is-printing-receipt')
+            }, 500)
+        }
     }
 
     // Process payment

@@ -108,6 +108,26 @@ const guides = [
                 </ul>
             </div>
         )
+    },
+    {
+        id: 'rawbt',
+        title: 'Print Struk via HP (RawBT)',
+        icon: ClipboardDocumentCheckIcon,
+        content: (
+            <div className="space-y-3 text-sm text-gray-600">
+                <p>Untuk print struk ke printer thermal via HP Android, gunakan aplikasi <b>RawBT</b>.</p>
+                <ol className="list-decimal ml-5 space-y-2">
+                    <li><b>Install RawBT:</b> Download "RawBT - Print Service" dari Play Store.</li>
+                    <li><b>Pair Printer:</b> Nyalakan printer thermal (Eppos/lainnya) dan pair via Bluetooth di Settings HP.</li>
+                    <li><b>Setup RawBT:</b> Buka RawBT → Pilih printer yang sudah di-pair → Set sebagai default.</li>
+                    <li><b>Test Print:</b> Di RawBT, klik "Test Print" untuk pastikan koneksi OK.</li>
+                    <li><b>Print Struk:</b> Di Kasir setelah transaksi selesai, klik tombol "Cetak" → Struk otomatis terkirim ke printer.</li>
+                </ol>
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mt-3">
+                    <p className="text-yellow-800 text-xs"><b>Tips:</b> Pastikan RawBT berjalan di background dan Bluetooth aktif saat print.</p>
+                </div>
+            </div>
+        )
     }
 ]
 
