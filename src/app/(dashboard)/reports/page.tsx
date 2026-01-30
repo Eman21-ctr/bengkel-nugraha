@@ -140,12 +140,13 @@ export default function ReportsPage() {
             ]
         } else if (reportType === 'transactions') {
             data = [
-                ['No. Invoice', 'Tanggal', 'Tipe', 'Pelanggan', 'Kasir', 'Total', 'Metode'],
+                ['No. Invoice', 'Tanggal', 'Tipe', 'Pelanggan', 'Teknisi', 'Kasir', 'Total', 'Metode'],
                 ...transactions.map(t => [
                     t.invoice_number,
                     new Date(t.created_at).toLocaleString(),
                     t.type,
                     t.member?.name || 'Umum',
+                    Array.from(new Set(t.items.map((i: any) => i.employee?.name).filter(Boolean))).join(', ') || '-',
                     t.cashier_name || t.profiles?.full_name || 'Admin',
                     t.final_amount,
                     t.payment_method
@@ -641,6 +642,7 @@ export default function ReportsPage() {
                                         <th className="px-6 py-4 text-left">Waktu</th>
                                         <th className="px-6 py-4 text-left">No. Struk</th>
                                         <th className="px-6 py-4 text-left">Pelanggan</th>
+                                        <th className="px-6 py-4 text-left">Teknisi</th>
                                         <th className="px-6 py-4 text-left">Kasir</th>
                                         <th className="px-6 py-4 text-center">Tipe</th>
                                         <th className="px-6 py-4 text-right">Total</th>
@@ -659,6 +661,17 @@ export default function ReportsPage() {
                                             <td className="px-6 py-4">
                                                 <p className="text-gray-900">{tx.member?.name || '-'}</p>
                                                 {tx.member?.vehicle_plate && <p className="text-[10px] text-gray-400 font-bold uppercase">{tx.member.vehicle_plate}</p>}
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="flex flex-wrap gap-1">
+                                                    {Array.from(new Set(tx.items.map((i: any) => i.employee?.name).filter(Boolean))).length > 0 ? (
+                                                        Array.from(new Set(tx.items.map((i: any) => i.employee?.name).filter(Boolean))).map((name: any) => (
+                                                            <span key={name} className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-[10px] font-bold">
+                                                                {name}
+                                                            </span>
+                                                        ))
+                                                    ) : '-'}
+                                                </div>
                                             </td>
                                             <td className="px-6 py-4 text-gray-500 italic">{tx.cashier_name || tx.cashier?.full_name || '-'}</td>
                                             <td className="px-6 py-4 text-center">
