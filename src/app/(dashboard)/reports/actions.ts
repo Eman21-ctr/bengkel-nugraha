@@ -1,6 +1,8 @@
 'use server'
 
 import { createClient } from '@/utils/supabase/server'
+import { revalidatePath } from 'next/cache'
+import { getPointConfig } from '../transactions/actions'
 
 // Types
 export type ReportPeriod = 'today' | 'week' | 'month' | 'year' | 'custom'
@@ -424,4 +426,128 @@ export async function getMemberHistory(memberId: string) {
     }
 
     return data
+}
+
+// Delete Transaction with full reversal logic
+export async function deleteTransaction(transactionId: string) {
+    const supabase = await createClient()
+
+    try {
+        // 1. Fetch full transaction details
+        const { data: tx, error: fetchError } = await supabase
+            .from('transactions')
+            .select(`
+                *,
+                items:transaction_items(*)
+            `)
+            .eq('id', transactionId)
+            .single()
+
+        if (fetchError || !tx) throw new Error('Transaksi tidak ditemukan')
+
+        // 2. Restore Stock for products
+        for (const item of tx.items) {
+            if (item.item_type === 'product' && item.product_id) {
+                const { data: product } = await supabase
+                    .from('products')
+                    .select('stock')
+                    .eq('id', item.product_id)
+                    .single()
+
+                if (product) {
+                    const stock_before = product.stock
+                    const stock_after = stock_before + item.qty
+
+                    // Record stock reversal (movement)
+                    await supabase.from('stock_movements').insert({
+                        product_id: item.product_id,
+                        type: 'in', // In means stock returning
+                        qty: item.qty,
+                        stock_before,
+                        stock_after,
+                        description: `PEMBATALAN - ${tx.invoice_number}`
+                    })
+
+                    // Update product stock
+                    await supabase
+                        .from('products')
+                        .update({ stock: stock_after })
+                        .eq('id', item.product_id)
+                }
+            }
+        }
+
+        // 3. Restore Member Points & Visit Count
+        if (tx.member_id) {
+            const config = await getPointConfig()
+            const { data: member } = await supabase
+                .from('members')
+                .select('points, visit_count')
+                .eq('id', tx.member_id)
+                .single()
+
+            if (member) {
+                // Points reversal logic: 
+                // new_points = current_points - earned_points + points_used
+                const earnedPoints = Math.floor(tx.final_amount / config.earn_per) * config.earn_point
+                const newPoints = Math.max(0, member.points - earnedPoints + (tx.points_used || 0))
+
+                await supabase
+                    .from('members')
+                    .update({
+                        points: newPoints,
+                        visit_count: Math.max(0, (member.visit_count || 0) - 1)
+                    })
+                    .eq('id', tx.member_id)
+            }
+        }
+
+        // 4. Handle Queue recovery
+        // Search if any queue was linked to this transaction
+        const { data: queue } = await supabase
+            .from('queues')
+            .select('id')
+            .eq('transaction_id', transactionId)
+            .single()
+
+        if (queue) {
+            await supabase
+                .from('queues')
+                .update({
+                    status: 'Menunggu',
+                    transaction_id: null
+                })
+                .eq('id', queue.id)
+        }
+
+        // 5. Delete Service Reminders
+        await supabase
+            .from('service_reminders')
+            .delete()
+            .eq('invoice_id', transactionId)
+
+        // 6. Delete the transaction (and cascaded items/payments if configured, but let's be explicit)
+        // Note: transaction_items and transaction_payments should have ON DELETE CASCADE
+        // but if not, we delete them first
+        await supabase.from('transaction_items').delete().eq('transaction_id', transactionId)
+        await supabase.from('transaction_payments').delete().eq('transaction_id', transactionId)
+
+        const { error: deleteError } = await supabase
+            .from('transactions')
+            .delete()
+            .eq('id', transactionId)
+
+        if (deleteError) throw deleteError
+
+        revalidatePath('/reports')
+        revalidatePath('/transactions')
+        revalidatePath('/inventory')
+        revalidatePath('/reminders')
+        revalidatePath('/')
+
+        return { success: true }
+    } catch (error: any) {
+        console.error('Delete transaction error:', error)
+        return { error: `Gagal menghapus transaksi: ${error.message}` }
+    }
 }

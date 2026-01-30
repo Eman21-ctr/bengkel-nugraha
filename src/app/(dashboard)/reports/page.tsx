@@ -14,7 +14,8 @@ import {
     XMarkIcon,
     CheckCircleIcon,
     PlusIcon,
-    ArrowPathIcon
+    ArrowPathIcon,
+    TrashIcon
 } from '@heroicons/react/24/outline'
 import * as XLSX from 'xlsx'
 import { Receipt } from '@/components/Receipt'
@@ -30,6 +31,7 @@ import {
     getMemberHistory,
     getDetailedTransactions,
     getTechnicianReport,
+    deleteTransaction,
     type ReportPeriod
 } from './actions'
 import { getPaymentHistory, addPaymentRecord } from '../transactions/actions'
@@ -67,6 +69,7 @@ export default function ReportsPage() {
     const [printingPayment, setPrintingPayment] = useState<any>(null)
     const [storeProfile, setStoreProfile] = useState({ name: '', address: '', phone: '' })
     const [selectedMemberForHistory, setSelectedMemberForHistory] = useState<any>(null)
+    const [isDeletingTx, setIsDeletingTx] = useState<string | null>(null)
 
     const [isPending, startTransition] = useTransition()
 
@@ -273,6 +276,20 @@ export default function ReportsPage() {
                 document.body.classList.remove('is-printing-receipt')
             }, 500)
         }
+    }
+
+    const handleDeleteTransaction = async (id: string) => {
+        if (!confirm('PERINGATAN: Menghapus transaksi akan mengembalikan stok barang dan poin member. Lanjutkan?')) return
+
+        startTransition(async () => {
+            const result = await deleteTransaction(id)
+            if (result.success) {
+                alert('Transaksi berhasil dihapus dan data telah dikembalikan.')
+                loadData()
+            } else {
+                alert(result.error)
+            }
+        })
     }
 
     const periodOptions: { value: ReportPeriod; label: string }[] = [
@@ -712,6 +729,13 @@ export default function ReportsPage() {
                                                             <BanknotesIcon className="w-5 h-5" />
                                                         </button>
                                                     )}
+                                                    <button
+                                                        onClick={() => handleDeleteTransaction(tx.id)}
+                                                        className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                                                        title="Hapus Transaksi (Kembalikan Data)"
+                                                    >
+                                                        <TrashIcon className="w-5 h-5" />
+                                                    </button>
                                                 </div>
                                             </td>
                                         </tr>
