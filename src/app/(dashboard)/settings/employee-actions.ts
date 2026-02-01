@@ -54,3 +54,30 @@ export async function getEmployees() {
     if (error) return []
     return data
 }
+
+export async function deleteEmployee(id: string) {
+    const supabase = await createClient()
+
+    // Try hard delete first
+    const { error: hardDeleteError } = await supabase.from('employees').delete().eq('id', id)
+
+    if (hardDeleteError) {
+        // If it fails (likely due to FK constraints), fallback to soft delete
+        console.log('Hard delete failed, falling back to soft delete for employee:', id)
+        const { error: softDeleteError } = await supabase
+            .from('employees')
+            .update({ is_active: false })
+            .eq('id', id)
+
+        if (softDeleteError) {
+            console.error('Error soft deleting employee:', softDeleteError)
+            return { error: 'Gagal menghapus karyawan' }
+        }
+
+        revalidatePath('/settings')
+        return { success: true, message: 'Karyawan dinonaktifkan karena memiliki riwayat pekerjaan' }
+    }
+
+    revalidatePath('/settings')
+    return { success: true }
+}

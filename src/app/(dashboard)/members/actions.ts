@@ -9,6 +9,7 @@ export async function getMembers(query: string = '') {
     let dbQuery = supabase
         .from('members')
         .select('*')
+        .eq('is_active', true)
         .order('name', { ascending: true })
 
     if (query) {
@@ -156,11 +157,27 @@ export async function updateMember(prevState: any, formData: FormData) {
 
 export async function deleteMember(id: string) {
     const supabase = await createClient()
-    const { error } = await supabase.from('members').delete().eq('id', id)
 
-    if (error) {
-        return { error: 'Gagal menghapus member' }
+    // Try hard delete first
+    const { error: hardDeleteError } = await supabase.from('members').delete().eq('id', id)
+
+    if (hardDeleteError) {
+        // If it fails (likely due to FK constraints), fallback to soft delete
+        console.log('Hard delete failed, falling back to soft delete for member:', id)
+        const { error: softDeleteError } = await supabase
+            .from('members')
+            .update({ is_active: false })
+            .eq('id', id)
+
+        if (softDeleteError) {
+            console.error('Error soft deleting member:', softDeleteError)
+            return { error: 'Gagal menghapus member' }
+        }
+
+        revalidatePath('/members')
+        return { success: true, message: 'Member dinonaktifkan karena memiliki riwayat transaksi' }
     }
+
     revalidatePath('/members')
     return { success: true }
 }

@@ -67,9 +67,16 @@ export default function MembersPage() {
     // Delete handler
     async function handleDelete(id: string) {
         if (confirm('Yakin ingin menghapus member ini?')) {
-            await deleteMember(id)
-            const data = await getMembers(searchQuery)
-            setMembers(data as Member[])
+            const result = await deleteMember(id)
+            if (result.success) {
+                if (result.message) {
+                    alert(result.message)
+                }
+                const data = await getMembers(searchQuery)
+                setMembers(data as Member[])
+            } else {
+                alert(result.error)
+            }
         }
     }
 

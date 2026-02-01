@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useTransition, useCallback } from 'react'
-import { Cog6ToothIcon, BuildingStorefrontIcon, GiftIcon, UserCircleIcon, ArrowRightOnRectangleIcon, UserGroupIcon, PlusIcon, BriefcaseIcon } from '@heroicons/react/24/outline'
+import { Cog6ToothIcon, BuildingStorefrontIcon, GiftIcon, UserCircleIcon, ArrowRightOnRectangleIcon, UserGroupIcon, PlusIcon, BriefcaseIcon, TrashIcon } from '@heroicons/react/24/outline'
 import { getStoreProfile, updateStoreProfile, uploadLogo, getPointConfig, updatePointConfig, getCurrentUser, logout } from './actions'
 import { useActionState } from 'react'
 import { useFormStatus } from 'react-dom'
@@ -784,7 +784,7 @@ function AddUserModal({ roles, onClose, onSuccess }: { roles: Role[]; onClose: (
 }
 
 // --- NEW COMPONENT: EMPLOYEE MANAGEMENT ---
-import { createEmployee, updateEmployee as updateEmployeeDB, toggleEmployeeStatus, getEmployees as getAllEmployeesDB } from './employee-actions'
+import { createEmployee, updateEmployee as updateEmployeeDB, toggleEmployeeStatus, getEmployees as getAllEmployeesDB, deleteEmployee } from './employee-actions'
 
 function EmployeeManagement({ onUpdate }: { onUpdate: () => void }) {
     const [employees, setEmployees] = useState<any[]>([])
@@ -806,6 +806,20 @@ function EmployeeManagement({ onUpdate }: { onUpdate: () => void }) {
         const data = await getAllEmployeesDB()
         setEmployees(data)
         onUpdate()
+    }
+
+    const handleDelete = async (id: string) => {
+        if (!confirm('PERINGATAN: Menghapus karyawan akan menghilangkan data dari daftar. Jika karyawan ini memiliki riwayat pekerjaan, posisinya akan dinonaktifkan secara otomatis. Lanjutkan?')) return
+
+        const result = await deleteEmployee(id)
+        if (result.success) {
+            alert(result.message || 'Karyawan berhasil dihapus.')
+            const data = await getAllEmployeesDB()
+            setEmployees(data)
+            onUpdate()
+        } else {
+            alert(result.error)
+        }
     }
 
     return (
@@ -875,6 +889,13 @@ function EmployeeManagement({ onUpdate }: { onUpdate: () => void }) {
                                 title="Edit Karyawan"
                             >
                                 <PencilSquareIcon className="w-4 h-4" />
+                            </button>
+                            <button
+                                onClick={() => handleDelete(emp.id)}
+                                className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all cursor-pointer"
+                                title="Hapus Karyawan"
+                            >
+                                <TrashIcon className="w-4 h-4" />
                             </button>
                             <button
                                 onClick={() => handleToggle(emp.id, emp.is_active)}
