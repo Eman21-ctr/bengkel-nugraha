@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useTransition, useCallback } from 'react'
 import { Cog6ToothIcon, BuildingStorefrontIcon, GiftIcon, UserCircleIcon, ArrowRightOnRectangleIcon, UserGroupIcon, PlusIcon, BriefcaseIcon, TrashIcon } from '@heroicons/react/24/outline'
-import { getStoreProfile, updateStoreProfile, uploadLogo, getPointConfig, updatePointConfig, getCurrentUser, logout } from './actions'
+import { getStoreProfile, updateStoreProfile, uploadLogo, removeLogo, getPointConfig, updatePointConfig, getCurrentUser, logout } from './actions'
 import { useActionState } from 'react'
 import { useFormStatus } from 'react-dom'
 import { useRouter } from 'next/navigation'
@@ -131,6 +131,61 @@ export default function SettingsPage() {
     )
 }
 
+// Helper to compress/resize image client side to ensure crisp PNG/JPEG without huge file payload
+function compressImage(file: File, maxSize: number = 400): Promise<File> {
+    return new Promise((resolve) => {
+        if (!file.type.startsWith('image/')) {
+            resolve(file)
+            return
+        }
+        const reader = new FileReader()
+        reader.onload = (e) => {
+            const img = new Image()
+            img.onload = () => {
+                const canvas = document.createElement('canvas')
+                let width = img.width
+                let height = img.height
+
+                if (width > height) {
+                    if (width > maxSize) {
+                        height = Math.round((height * maxSize) / width)
+                        width = maxSize
+                    }
+                } else {
+                    if (height > maxSize) {
+                        width = Math.round((width * maxSize) / height)
+                        height = maxSize
+                    }
+                }
+
+                canvas.width = width
+                canvas.height = height
+                const ctx = canvas.getContext('2d')
+                if (ctx) {
+                    ctx.drawImage(img, 0, 0, width, height)
+                }
+
+                const outputType = file.type === 'image/png' ? 'image/png' : 'image/jpeg'
+                canvas.toBlob((blob) => {
+                    if (blob) {
+                        const resizedFile = new File([blob], file.name, {
+                            type: outputType,
+                            lastModified: Date.now()
+                        })
+                        resolve(resizedFile)
+                    } else {
+                        resolve(file)
+                    }
+                }, outputType, 0.85)
+            }
+            img.onerror = () => resolve(file)
+            img.src = e.target?.result as string
+        }
+        reader.onerror = () => resolve(file)
+        reader.readAsDataURL(file)
+    })
+}
+
 // Store Profile Form
 function StoreProfileForm({ initialData, onUpdate }: { initialData: any; onUpdate: () => void }) {
     const [state, formAction] = useActionState(updateStoreProfile, null)
@@ -138,6 +193,7 @@ function StoreProfileForm({ initialData, onUpdate }: { initialData: any; onUpdat
     const [uploadingKafe, setUploadingKafe] = useState(false)
     const [logoBengkel, setLogoBengkel] = useState(initialData.logo_bengkel || '')
     const [logoKafe, setLogoKafe] = useState(initialData.logo_kafe || '')
+    const [logoStatus, setLogoStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
 
     useEffect(() => {
         setLogoBengkel(initialData.logo_bengkel || '')
@@ -151,19 +207,59 @@ function StoreProfileForm({ initialData, onUpdate }: { initialData: any; onUpdat
     }, [state, onUpdate])
 
     const handleLogoUpload = async (file: File, type: 'bengkel' | 'kafe') => {
+        setLogoStatus(null)
+
+        // Validate format
+        const validExtensions = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp']
+        if (!validExtensions.includes(file.type.toLowerCase()) && !file.name.match(/\.(png|jpe?g|webp)$/i)) {
+            setLogoStatus({ type: 'error', message: 'File harus berformat PNG atau JPEG/JPG.' })
+            return
+        }
+
         if (type === 'bengkel') setUploadingBengkel(true)
         else setUploadingKafe(true)
 
-        const formData = new FormData()
-        formData.append('file', file)
-        formData.append('type', type)
+        try {
+            // Compress/resize to optimal size for thermal print/display
+            const processedFile = await compressImage(file, 400)
 
-        const result = await uploadLogo(formData)
+            const formData = new FormData()
+            formData.append('file', processedFile)
+            formData.append('type', type)
 
-        if (result.success && result.url) {
-            if (type === 'bengkel') setLogoBengkel(result.url)
-            else setLogoKafe(result.url)
+            const result = await uploadLogo(formData)
+
+            if (result.success && result.url) {
+                if (type === 'bengkel') setLogoBengkel(result.url)
+                else setLogoKafe(result.url)
+                setLogoStatus({ type: 'success', message: `Logo ${type === 'bengkel' ? 'Bengkel' : 'Kafe'} berhasil diupload!` })
+                onUpdate()
+            } else if (result.error) {
+                setLogoStatus({ type: 'error', message: result.error })
+            }
+        } catch (err: any) {
+            setLogoStatus({ type: 'error', message: 'Gagal mengupload logo.' })
+        } finally {
+            if (type === 'bengkel') setUploadingBengkel(false)
+            else setUploadingKafe(false)
+        }
+    }
+
+    const handleRemoveLogo = async (type: 'bengkel' | 'kafe') => {
+        if (!confirm(`Hapus logo ${type === 'bengkel' ? 'Bengkel' : 'Kafe'}?`)) return
+        setLogoStatus(null)
+
+        if (type === 'bengkel') setUploadingBengkel(true)
+        else setUploadingKafe(true)
+
+        const result = await removeLogo(type)
+        if (result.success) {
+            if (type === 'bengkel') setLogoBengkel('')
+            else setLogoKafe('')
+            setLogoStatus({ type: 'success', message: `Logo ${type === 'bengkel' ? 'Bengkel' : 'Kafe'} berhasil dihapus.` })
             onUpdate()
+        } else {
+            setLogoStatus({ type: 'error', message: result.error || 'Gagal menghapus logo.' })
         }
 
         if (type === 'bengkel') setUploadingBengkel(false)
@@ -175,7 +271,7 @@ function StoreProfileForm({ initialData, onUpdate }: { initialData: any; onUpdat
             <h3 className="text-lg font-bold text-gray-900 mb-4">Profil Usaha</h3>
             <form action={formAction} className="space-y-4 max-w-lg">
                 {state?.error && <p className="text-red-600 text-sm bg-red-50 p-2 rounded">{state.error}</p>}
-                {state?.success && <p className="text-green-600 text-sm bg-green-50 p-2 rounded">✅ Tersimpan!</p>}
+                {state?.success && <p className="text-green-600 text-sm bg-green-50 p-2 rounded">✅ Profil berhasil disimpan!</p>}
 
                 <div>
                     <label className="block text-sm font-medium text-gray-700">Nama Usaha</label>
@@ -202,66 +298,102 @@ function StoreProfileForm({ initialData, onUpdate }: { initialData: any; onUpdat
 
             {/* Logo Upload Section */}
             <div className="mt-8 pt-6 border-t border-gray-200">
-                <h4 className="text-md font-bold text-gray-900 mb-4">Logo untuk Struk</h4>
-                <p className="text-sm text-gray-500 mb-4">Upload logo yang akan tampil di struk. Logo akan muncul di kiri dan kanan atas struk.</p>
+                <h4 className="text-md font-bold text-gray-900 mb-1">Logo untuk Struk & Nota</h4>
+                <p className="text-sm text-gray-500 mb-4">Upload file gambar (PNG / JPEG) untuk logo bengkel. Logo akan otomatis tercetak di header struk transaksi.</p>
+
+                {logoStatus && (
+                    <div className={clsx(
+                        "p-3 rounded-lg text-sm font-medium mb-4 flex items-center justify-between",
+                        logoStatus.type === 'success' ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-700 border border-red-200"
+                    )}>
+                        <span>{logoStatus.message}</span>
+                        <button onClick={() => setLogoStatus(null)} className="text-xs text-gray-400 hover:text-gray-600 ml-2">✕</button>
+                    </div>
+                )}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Logo Bengkel */}
-                    <div className="space-y-3">
-                        <label className="block text-sm font-bold text-gray-700">Logo Bengkel (Kiri)</label>
+                    <div className="space-y-3 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                        <label className="block text-sm font-bold text-gray-800">Logo Bengkel (Kiri Struk)</label>
                         <div className="flex items-center gap-4">
-                            <div className="w-20 h-20 rounded-xl border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50 overflow-hidden">
+                            <div className="w-20 h-20 rounded-xl border-2 border-dashed border-gray-300 flex items-center justify-center bg-white overflow-hidden shadow-inner shrink-0">
                                 {logoBengkel ? (
-                                    <img src={logoBengkel} alt="Logo Bengkel" className="w-full h-full object-contain" />
+                                    <img src={logoBengkel} alt="Logo Bengkel" className="w-full h-full object-contain p-1" />
                                 ) : (
-                                    <span className="text-[10px] text-gray-400 text-center">Belum ada</span>
+                                    <span className="text-[10px] text-gray-400 text-center px-1">Belum ada logo</span>
                                 )}
                             </div>
-                            <div>
-                                <label className="cursor-pointer inline-flex items-center gap-2 px-3 py-2 bg-orange-50 text-orange-600 rounded-lg text-xs font-bold hover:bg-orange-100 transition-all">
-                                    {uploadingBengkel ? 'Mengupload...' : '📷 Upload Logo'}
+                            <div className="space-y-2">
+                                <label className="cursor-pointer inline-flex items-center gap-2 px-3 py-2 bg-orange-600 text-white rounded-lg text-xs font-bold hover:bg-orange-700 transition-all shadow-sm">
+                                    {uploadingBengkel ? 'Mengupload...' : '📷 Upload Logo (PNG/JPEG)'}
                                     <input
                                         type="file"
-                                        accept="image/*"
+                                        accept="image/png, image/jpeg, image/jpg, image/webp"
                                         className="hidden"
                                         disabled={uploadingBengkel}
                                         onChange={(e) => {
                                             const file = e.target.files?.[0]
                                             if (file) handleLogoUpload(file, 'bengkel')
+                                            e.target.value = ''
                                         }}
                                     />
                                 </label>
-                                <p className="text-[10px] text-gray-400 mt-1">PNG/JPG, max 1MB</p>
+                                {logoBengkel && (
+                                    <div>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleRemoveLogo('bengkel')}
+                                            disabled={uploadingBengkel}
+                                            className="text-xs text-red-600 hover:text-red-800 font-semibold underline cursor-pointer"
+                                        >
+                                            Hapus Logo
+                                        </button>
+                                    </div>
+                                )}
+                                <p className="text-[10px] text-gray-500">Format: PNG / JPG / JPEG</p>
                             </div>
                         </div>
                     </div>
 
                     {/* Logo Kafe */}
-                    <div className="space-y-3">
-                        <label className="block text-sm font-bold text-gray-700">Logo Kafe (Kanan)</label>
+                    <div className="space-y-3 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                        <label className="block text-sm font-bold text-gray-800">Logo Kafe (Kanan Struk)</label>
                         <div className="flex items-center gap-4">
-                            <div className="w-20 h-20 rounded-xl border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50 overflow-hidden">
+                            <div className="w-20 h-20 rounded-xl border-2 border-dashed border-gray-300 flex items-center justify-center bg-white overflow-hidden shadow-inner shrink-0">
                                 {logoKafe ? (
-                                    <img src={logoKafe} alt="Logo Kafe" className="w-full h-full object-contain" />
+                                    <img src={logoKafe} alt="Logo Kafe" className="w-full h-full object-contain p-1" />
                                 ) : (
-                                    <span className="text-[10px] text-gray-400 text-center">Belum ada</span>
+                                    <span className="text-[10px] text-gray-400 text-center px-1">Belum ada logo</span>
                                 )}
                             </div>
-                            <div>
-                                <label className="cursor-pointer inline-flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg text-xs font-bold hover:bg-blue-100 transition-all">
-                                    {uploadingKafe ? 'Mengupload...' : '📷 Upload Logo'}
+                            <div className="space-y-2">
+                                <label className="cursor-pointer inline-flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 transition-all shadow-sm">
+                                    {uploadingKafe ? 'Mengupload...' : '📷 Upload Logo (PNG/JPEG)'}
                                     <input
                                         type="file"
-                                        accept="image/*"
+                                        accept="image/png, image/jpeg, image/jpg, image/webp"
                                         className="hidden"
                                         disabled={uploadingKafe}
                                         onChange={(e) => {
                                             const file = e.target.files?.[0]
                                             if (file) handleLogoUpload(file, 'kafe')
+                                            e.target.value = ''
                                         }}
                                     />
                                 </label>
-                                <p className="text-[10px] text-gray-400 mt-1">PNG/JPG, max 1MB</p>
+                                {logoKafe && (
+                                    <div>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleRemoveLogo('kafe')}
+                                            disabled={uploadingKafe}
+                                            className="text-xs text-red-600 hover:text-red-800 font-semibold underline cursor-pointer"
+                                        >
+                                            Hapus Logo
+                                        </button>
+                                    </div>
+                                )}
+                                <p className="text-[10px] text-gray-500">Format: PNG / JPG / JPEG</p>
                             </div>
                         </div>
                     </div>

@@ -22,52 +22,100 @@ export async function getStoreProfile() {
     }
 }
 
-// Upload logo to storage
+// Upload logo to storage (supports PNG, JPEG, JPG, WEBP)
 export async function uploadLogo(formData: FormData) {
     const supabase = await createClient()
     const file = formData.get('file') as File
     const type = formData.get('type') as string // 'bengkel' or 'kafe'
 
     if (!file || file.size === 0) {
-        return { error: 'No file provided' }
+        return { error: 'Tidak ada file gambar yang dipilih' }
     }
 
-    const fileExt = file.name.split('.').pop()
-    const fileName = `logo_${type}_${Date.now()}.${fileExt}`
+    // Check mime type or extension
+    const fileType = file.type || ''
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp']
+    const isImage = allowedTypes.includes(fileType.toLowerCase()) || file.name.match(/\.(png|jpe?g|webp)$/i)
 
-    // Upload to logos bucket
-    const { error: uploadError } = await supabase.storage
-        .from('logos')
-        .upload(fileName, file, { upsert: true })
-
-    if (uploadError) {
-        console.error('Error uploading logo:', uploadError)
-        return { error: 'Gagal mengupload logo' }
+    if (!isImage) {
+        return { error: 'Format file tidak didukung. Harap gunakan PNG atau JPEG/JPG.' }
     }
 
-    // Get public URL
-    const { data: { publicUrl } } = supabase.storage
-        .from('logos')
-        .getPublicUrl(fileName)
+    try {
+        const fileExt = file.name.split('.').pop() || 'png'
+        const fileName = `logo_${type}_${Date.now()}.${fileExt}`
+        const bytes = await file.arrayBuffer()
+        const buffer = Buffer.from(bytes)
 
-    // Update store profile with new logo URL
-    const currentProfile = await getStoreProfile()
-    const updatedProfile = {
-        ...currentProfile,
-        [`logo_${type}`]: publicUrl
+        let logoUrl = ''
+
+        // Try upload to Supabase storage 'logos' bucket
+        const { error: uploadError } = await supabase.storage
+            .from('logos')
+            .upload(fileName, buffer, {
+                contentType: file.type || 'image/png',
+                upsert: true
+            })
+
+        if (!uploadError) {
+            const { data: { publicUrl } } = supabase.storage
+                .from('logos')
+                .getPublicUrl(fileName)
+            logoUrl = publicUrl
+        } else {
+            console.warn('Storage upload notice (using fallback base64 Data URL):', uploadError)
+            // Fallback to base64 Data URL if storage bucket fails or not configured
+            const base64 = buffer.toString('base64')
+            logoUrl = `data:${file.type || 'image/png'};base64,${base64}`
+        }
+
+        // Update store profile with new logo URL
+        const currentProfile = await getStoreProfile()
+        const updatedProfile = {
+            ...currentProfile,
+            [`logo_${type}`]: logoUrl
+        }
+
+        const { error: updateError } = await supabase
+            .from('settings')
+            .upsert({ key: 'store_profile', value: updatedProfile }, { onConflict: 'key' })
+
+        if (updateError) {
+            console.error('Error saving logo to settings table:', updateError)
+            return { error: 'Gagal menyimpan URL logo ke database' }
+        }
+
+        revalidatePath('/settings')
+        return { success: true, url: logoUrl }
+    } catch (err: any) {
+        console.error('Error processing logo upload:', err)
+        return { error: err.message || 'Gagal mengupload logo' }
     }
+}
 
-    const { error: updateError } = await supabase
-        .from('settings')
-        .update({ value: updatedProfile })
-        .eq('key', 'store_profile')
+// Remove logo
+export async function removeLogo(type: 'bengkel' | 'kafe') {
+    const supabase = await createClient()
+    try {
+        const currentProfile = await getStoreProfile()
+        const updatedProfile = {
+            ...currentProfile,
+            [`logo_${type}`]: ''
+        }
 
-    if (updateError) {
-        return { error: 'Gagal menyimpan URL logo' }
+        const { error: updateError } = await supabase
+            .from('settings')
+            .upsert({ key: 'store_profile', value: updatedProfile }, { onConflict: 'key' })
+
+        if (updateError) {
+            return { error: 'Gagal menghapus logo' }
+        }
+
+        revalidatePath('/settings')
+        return { success: true }
+    } catch (err: any) {
+        return { error: err.message || 'Gagal menghapus logo' }
     }
-
-    revalidatePath('/settings')
-    return { success: true, url: publicUrl }
 }
 
 // Update store profile
@@ -88,8 +136,7 @@ export async function updateStoreProfile(prevState: any, formData: FormData) {
 
     const { error } = await supabase
         .from('settings')
-        .update({ value: profile })
-        .eq('key', 'store_profile')
+        .upsert({ key: 'store_profile', value: profile }, { onConflict: 'key' })
 
     if (error) {
         console.error('Error updating profile:', error)
