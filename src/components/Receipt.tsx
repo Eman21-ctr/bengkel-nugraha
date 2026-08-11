@@ -86,11 +86,9 @@ export function Receipt({ storeInfo, transaction, showOnScreen = false }: Receip
                         <span>Pelanggan: {transaction.member.name}</span>
                     </div>
                 )}
-                {vehiclePlate && (
-                    <div className={transaction.member ? "mt-0.5" : "mt-1 border-t border-gray-100 pt-1"}>
-                        <span>No. Polisi: {vehiclePlate}</span>
-                    </div>
-                )}
+                <div className={transaction.member ? "mt-0.5" : "mt-1 border-t border-gray-100 pt-1"}>
+                    <span>No. Polisi: {vehiclePlate || '-'}</span>
+                </div>
                 {transaction.cashier && (
                     <div className="mt-1">
                         <span>Kasir: {transaction.cashier}</span>

@@ -138,10 +138,8 @@ export function generateReceiptText(data: ReceiptData): string {
     if (data.member) {
         out.push(`Plg: ${cut(data.member.name, W - 5)}`)
     }
-    const plate = data.vehiclePlate || data.member?.vehicle_plate
-    if (plate) {
-        out.push(`No.Pol: ${cut(plate, W - 8)}`)
-    }
+    const plate = data.vehiclePlate || data.member?.vehicle_plate || '-'
+    out.push(`No.Pol: ${cut(plate, W - 8)}`)
     if (data.cashier) {
         out.push(`Kasir: ${cut(data.cashier, W - 7)}`)
     }

@@ -1044,7 +1044,7 @@ export default function TransactionsPage() {
 
                                 {/* Vehicle Plate Input (Optional) */}
                                 <div>
-                                    <label className="block text-[8px] font-black text-gray-400 uppercase tracking-widest mb-0.5 ml-1">NO. POLISI KENDARAAN (OPSIONAL)</label>
+                                    <label className="block text-[8px] font-black text-gray-400 uppercase tracking-widest mb-0.5 ml-1">NO. POLISI KENDARAAN</label>
                                     <input
                                         type="text"
                                         value={vehiclePlate}
