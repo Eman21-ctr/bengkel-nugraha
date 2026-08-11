@@ -31,6 +31,7 @@ export type TransactionPayload = {
     note?: string
     cashier_name?: string // New: manual cashier name
     kilometer?: number // New: odometer reading
+    vehicle_plate?: string // New: vehicle plate number
 }
 
 // Fetch products for POS
@@ -134,29 +135,43 @@ export async function processTransaction(payload: TransactionPayload) {
         if (!user) throw new Error('Unauthorized')
 
         // 1. Create transaction record
-        const { data: transaction, error: txError } = await supabase
+        const insertPayload: any = {
+            user_id: user.id,
+            type: payload.type,
+            member_id: payload.member_id || null,
+            subtotal: payload.subtotal,
+            discount_amount: payload.discount,
+            points_used: payload.points_used,
+            total_amount: payload.subtotal,
+            final_amount: payload.total,
+            payment_method: payload.payment_method,
+            payment_amount: payload.payment_amount,
+            change: payload.payment_amount > payload.total ? payload.payment_amount - payload.total : 0,
+            note: payload.note || null,
+            cashier_name: payload.cashier_name || null,
+            kilometer: payload.kilometer || null,
+            vehicle_plate: payload.vehicle_plate || null,
+            payment_status: payload.payment_amount >= payload.total ? 'Lunas' : 'Belum Lunas'
+        }
+
+        let { data: transaction, error: txError } = await supabase
             .from('transactions')
-            .insert({
-                user_id: user.id,
-                type: payload.type,
-                member_id: payload.member_id || null,
-                subtotal: payload.subtotal,
-                discount_amount: payload.discount,
-                points_used: payload.points_used,
-                total_amount: payload.subtotal,
-                final_amount: payload.total,
-                payment_method: payload.payment_method,
-                payment_amount: payload.payment_amount,
-                change: payload.payment_amount > payload.total ? payload.payment_amount - payload.total : 0,
-                note: payload.note || null,
-                cashier_name: payload.cashier_name || null,
-                kilometer: payload.kilometer || null,
-                payment_status: payload.payment_amount >= payload.total ? 'Lunas' : 'Belum Lunas'
-            })
+            .insert(insertPayload)
             .select('id, invoice_number')
             .single()
 
-        if (txError) throw txError
+        if (txError && txError.message?.includes('vehicle_plate')) {
+            delete insertPayload.vehicle_plate
+            const retry = await supabase
+                .from('transactions')
+                .insert(insertPayload)
+                .select('id, invoice_number')
+                .single()
+            transaction = retry.data
+            txError = retry.error
+        }
+
+        if (txError || !transaction) throw (txError || new Error('Gagal membuat data transaksi'))
 
         // 1.1 Create initial payment record if amount > 0
         if (payload.payment_amount > 0) {

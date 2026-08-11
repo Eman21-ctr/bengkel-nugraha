@@ -82,6 +82,7 @@ export default function TransactionsPage() {
     const [paymentAmount, setPaymentAmount] = useState<number>(0)
     const [receiptNote, setReceiptNote] = useState<string>('')
     const [kilometer, setKilometer] = useState<number | ''>()
+    const [vehiclePlate, setVehiclePlate] = useState<string>('')
     const [showSuccess, setShowSuccess] = useState(false)
     const [invoiceNumber, setInvoiceNumber] = useState('')
     const [selectedCashierName, setSelectedCashierName] = useState<string>('')
@@ -318,6 +319,7 @@ export default function TransactionsPage() {
         setMemberSearch('')
         setMemberResults([])
         setPointsToUse(0)
+        if (member.vehicle_plate) setVehiclePlate(member.vehicle_plate)
 
         // Check loyalty reward
         const reward = await getEligibleReward(member.id)
@@ -329,6 +331,7 @@ export default function TransactionsPage() {
         setSelectedMember(null)
         setPointsToUse(0)
         setEligibleReward(null)
+        setVehiclePlate('')
     }
 
     // Queue selection handler - auto load member from queue
@@ -407,6 +410,7 @@ export default function TransactionsPage() {
             invoice: invoiceNumber,
             date: new Date(),
             member: selectedMember,
+            vehiclePlate: vehiclePlate || selectedMember?.vehicle_plate || undefined,
             cashier: selectedCashierName || userProfile?.full_name || 'Admin',
             kilometer: txType === 'bengkel' && kilometer ? Number(kilometer) : undefined,
             items: cart.map(item => ({
@@ -476,7 +480,8 @@ export default function TransactionsPage() {
             queue_id: selectedQueue?.id,
             note: receiptNote,
             cashier_name: selectedCashierName || userProfile?.full_name || 'Admin',
-            kilometer: txType === 'bengkel' && kilometer ? Number(kilometer) : undefined
+            kilometer: txType === 'bengkel' && kilometer ? Number(kilometer) : undefined,
+            vehicle_plate: vehiclePlate || selectedMember?.vehicle_plate || undefined
         }
 
         const result = await processTransaction(payload)
@@ -501,6 +506,7 @@ export default function TransactionsPage() {
         setPaymentAmount(0)
         setShowSuccess(false)
         setInvoiceNumber('')
+        setVehiclePlate('')
         // setReceiptNote('') <--- KNOCKED OUT (Review Request: Sticky Note)
         // Cashier Name also remains sticky
     }
@@ -1036,6 +1042,18 @@ export default function TransactionsPage() {
                                     />
                                 </div>
 
+                                {/* Vehicle Plate Input (Optional) */}
+                                <div>
+                                    <label className="block text-[8px] font-black text-gray-400 uppercase tracking-widest mb-0.5 ml-1">NO. POLISI KENDARAAN (OPSIONAL)</label>
+                                    <input
+                                        type="text"
+                                        value={vehiclePlate}
+                                        onChange={(e) => setVehiclePlate(e.target.value.toUpperCase())}
+                                        placeholder="Contoh: B 1234 XYZ"
+                                        className="w-full bg-gray-50 border border-gray-200 rounded-xl py-1.5 px-3 text-[10px] font-bold text-gray-900 focus:border-primary focus:ring-0 transition-all placeholder:text-gray-200 uppercase"
+                                    />
+                                </div>
+
                                 {/* Kilometer Input - Bengkel Only */}
                                 {txType === 'bengkel' && (
                                     <div>
@@ -1106,6 +1124,7 @@ export default function TransactionsPage() {
                                     paymentAmount,
                                     change: cleanChange,
                                     member: selectedMember,
+                                    vehiclePlate: vehiclePlate || selectedMember?.vehicle_plate || undefined,
                                     cashier: selectedCashierName || userProfile?.full_name || 'Admin',
                                     note: receiptNote,
                                     kilometer: txType === 'bengkel' && kilometer ? Number(kilometer) : undefined
@@ -1149,6 +1168,7 @@ export default function TransactionsPage() {
                     paymentAmount,
                     change: cleanChange,
                     member: selectedMember,
+                    vehiclePlate: vehiclePlate || selectedMember?.vehicle_plate || undefined,
                     cashier: selectedCashierName || userProfile?.full_name || 'Admin',
                     note: receiptNote,
                     kilometer: txType === 'bengkel' && kilometer ? Number(kilometer) : undefined

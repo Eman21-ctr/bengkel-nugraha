@@ -91,6 +91,7 @@ type ReceiptData = {
     invoice: string
     date: Date
     member?: { name: string; vehicle_plate?: string | null } | null
+    vehiclePlate?: string | null
     cashier?: string
     kilometer?: number
     items: Array<{
@@ -135,8 +136,11 @@ export function generateReceiptText(data: ReceiptData): string {
     out.push(`Tgl: ${tgl} ${jam}`)
 
     if (data.member) {
-        const plg = data.member.vehicle_plate || data.member.name
-        out.push(`Plg: ${cut(plg, W - 5)}`)
+        out.push(`Plg: ${cut(data.member.name, W - 5)}`)
+    }
+    const plate = data.vehiclePlate || data.member?.vehicle_plate
+    if (plate) {
+        out.push(`No.Pol: ${cut(plate, W - 8)}`)
     }
     if (data.cashier) {
         out.push(`Kasir: ${cut(data.cashier, W - 7)}`)

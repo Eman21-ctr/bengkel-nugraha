@@ -314,7 +314,7 @@ function StoreProfileForm({ initialData, onUpdate }: { initialData: any; onUpdat
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Logo Bengkel */}
                     <div className="space-y-3 p-4 bg-slate-50 rounded-xl border border-slate-200">
-                        <label className="block text-sm font-bold text-gray-800">Logo Bengkel (Kiri Struk)</label>
+                        <label className="block text-sm font-bold text-gray-800">Logo Bengkel (Header Struk)</label>
                         <div className="flex items-center gap-4">
                             <div className="w-20 h-20 rounded-xl border-2 border-dashed border-gray-300 flex items-center justify-center bg-white overflow-hidden shadow-inner shrink-0">
                                 {logoBengkel ? (
@@ -357,7 +357,7 @@ function StoreProfileForm({ initialData, onUpdate }: { initialData: any; onUpdat
 
                     {/* Logo Kafe */}
                     <div className="space-y-3 p-4 bg-slate-50 rounded-xl border border-slate-200">
-                        <label className="block text-sm font-bold text-gray-800">Logo Kafe (Kanan Struk)</label>
+                        <label className="block text-sm font-bold text-gray-800">Logo Kafe (Profil)</label>
                         <div className="flex items-center gap-4">
                             <div className="w-20 h-20 rounded-xl border-2 border-dashed border-gray-300 flex items-center justify-center bg-white overflow-hidden shadow-inner shrink-0">
                                 {logoKafe ? (

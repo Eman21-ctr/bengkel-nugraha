@@ -26,6 +26,7 @@ type ReceiptProps = {
             points: number
             vehicle_plate?: string | null // Added vehicle_plate
         } | null
+        vehiclePlate?: string | null // Optional vehicle plate
         cashier?: string // New: Cashier name
         note?: string // New: Custom footer note
         paymentHistory?: any[] // New: List of all payments for audit
@@ -42,21 +43,16 @@ export function Receipt({ storeInfo, transaction, showOnScreen = false }: Receip
         ? "w-full max-w-[80mm] mx-auto p-4 text-black font-mono text-sm leading-tight bg-white border border-gray-100 shadow-inner rounded-xl"
         : "hidden print:block w-[80mm] p-4 text-black font-mono text-sm leading-tight bg-white"
 
+    const vehiclePlate = transaction.vehiclePlate || transaction.member?.vehicle_plate
+
     return (
         <div id={showOnScreen ? undefined : "receipt-print"} className={containerClasses}>
             <div className="text-center border-b border-dashed border-black pb-2 mb-2">
-                {/* Logo Header */}
-                {(storeInfo.logo_bengkel || storeInfo.logo_kafe) && (
-                    <div className="flex justify-between items-center mb-2">
-                        <div className="w-12 h-12">
-                            {storeInfo.logo_bengkel && (
-                                <img src={storeInfo.logo_bengkel} alt="Logo Bengkel" className="w-full h-full object-contain" />
-                            )}
-                        </div>
-                        <div className="w-12 h-12">
-                            {storeInfo.logo_kafe && (
-                                <img src={storeInfo.logo_kafe} alt="Logo Kafe" className="w-full h-full object-contain" />
-                            )}
+                {/* Logo Header - Logo Bengkel Only */}
+                {storeInfo.logo_bengkel && (
+                    <div className="flex justify-center items-center mb-2">
+                        <div className="w-16 h-16 max-h-16">
+                            <img src={storeInfo.logo_bengkel} alt="Logo Bengkel" className="w-full h-full object-contain mx-auto" />
                         </div>
                     </div>
                 )}
@@ -75,7 +71,12 @@ export function Receipt({ storeInfo, transaction, showOnScreen = false }: Receip
                 </div>
                 {transaction.member && (
                     <div className="mt-1 border-t border-gray-100 pt-1">
-                        <span>Pelanggan: {transaction.type === 'bengkel' && transaction.member.vehicle_plate ? transaction.member.vehicle_plate : transaction.member.name}</span>
+                        <span>Pelanggan: {transaction.member.name}</span>
+                    </div>
+                )}
+                {vehiclePlate && (
+                    <div className={transaction.member ? "mt-0.5" : "mt-1 border-t border-gray-100 pt-1"}>
+                        <span>No. Polisi: {vehiclePlate}</span>
                     </div>
                 )}
                 {transaction.cashier && (

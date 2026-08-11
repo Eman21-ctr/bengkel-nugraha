@@ -245,6 +245,7 @@ export default function ReportsPage() {
             invoice: selectedTransaction.invoice_number,
             date: new Date(selectedTransaction.created_at),
             member: selectedTransaction.member,
+            vehiclePlate: selectedTransaction.vehicle_plate || selectedTransaction.member?.vehicle_plate,
             cashier: selectedTransaction.cashier_name || selectedTransaction.cashier?.full_name,
             kilometer: selectedTransaction.kilometer,
             items: selectedTransaction.items.map((it: any) => ({
@@ -903,6 +904,7 @@ export default function ReportsPage() {
                                     paymentAmount: Number(selectedTransaction.final_amount), // Simplified for re-print
                                     change: 0,
                                     member: selectedTransaction.member,
+                                    vehiclePlate: selectedTransaction.vehicle_plate || selectedTransaction.member?.vehicle_plate,
                                     cashier: selectedTransaction.cashier_name || selectedTransaction.cashier?.full_name,
                                     paymentHistory: selectedTransaction.payments
                                 }}
@@ -943,6 +945,7 @@ export default function ReportsPage() {
                         paymentAmount: Number(selectedTransaction.final_amount),
                         change: 0,
                         member: selectedTransaction.member,
+                        vehiclePlate: selectedTransaction.vehicle_plate || selectedTransaction.member?.vehicle_plate,
                         cashier: selectedTransaction.cashier_name || selectedTransaction.cashier?.full_name,
                         paymentHistory: selectedTransaction.payments
                     }}
