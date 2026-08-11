@@ -49,11 +49,23 @@ export function Receipt({ storeInfo, transaction, showOnScreen = false }: Receip
         <div id={showOnScreen ? undefined : "receipt-print"} className={containerClasses}>
             <div className="text-center border-b border-dashed border-black pb-2 mb-2">
                 {/* Logo Header - Logo Bengkel Only */}
-                {storeInfo.logo_bengkel && (
-                    <div className="flex justify-center items-center mb-2">
-                        <div className="w-16 h-16 max-h-16">
-                            <img src={storeInfo.logo_bengkel} alt="Logo Bengkel" className="w-full h-full object-contain mx-auto" />
-                        </div>
+                {storeInfo?.logo_bengkel && (
+                    <div className="flex justify-center items-center mb-2 text-center">
+                        <img
+                            src={storeInfo.logo_bengkel}
+                            alt="Logo Bengkel"
+                            className="mx-auto block object-contain"
+                            style={{
+                                maxHeight: '64px',
+                                maxWidth: '140px',
+                                width: 'auto',
+                                height: 'auto',
+                                margin: '0 auto mb-2',
+                                display: 'block',
+                                WebkitPrintColorAdjust: 'exact',
+                                printColorAdjust: 'exact'
+                            }}
+                        />
                     </div>
                 )}
                 <h2 className="text-lg font-bold uppercase tracking-tighter">{storeInfo.name}</h2>

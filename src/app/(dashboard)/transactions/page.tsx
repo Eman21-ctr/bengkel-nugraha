@@ -58,7 +58,7 @@ export default function TransactionsPage() {
     const [services, setServices] = useState<Service[]>([])
     const [categories, setCategories] = useState<Category[]>([])
     const [pointConfig, setPointConfig] = useState({ earn_per: 10000, earn_point: 1, redeem_value: 100 })
-    const [storeProfile, setStoreProfile] = useState({ name: '', address: '', phone: '' })
+    const [storeProfile, setStoreProfile] = useState<{ name: string; address: string; phone: string; logo_bengkel?: string; logo_kafe?: string }>({ name: '', address: '', phone: '', logo_bengkel: '', logo_kafe: '' })
 
     // Edit states
     const [editingProduct, setEditingProduct] = useState<Product | null>(null)

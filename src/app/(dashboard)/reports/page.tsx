@@ -67,7 +67,7 @@ export default function ReportsPage() {
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false)
     const [selectedPaymentTx, setSelectedPaymentTx] = useState<any>(null)
     const [printingPayment, setPrintingPayment] = useState<any>(null)
-    const [storeProfile, setStoreProfile] = useState({ name: '', address: '', phone: '' })
+    const [storeProfile, setStoreProfile] = useState<{ name: string; address: string; phone: string; logo_bengkel?: string; logo_kafe?: string }>({ name: '', address: '', phone: '', logo_bengkel: '', logo_kafe: '' })
     const [selectedMemberForHistory, setSelectedMemberForHistory] = useState<any>(null)
     const [isDeletingTx, setIsDeletingTx] = useState<string | null>(null)
 
